@@ -6,14 +6,14 @@
 
 在线演示（WebAssembly 构建）：<https://CyanArc0.github.io/Columbula/>
 
-<table>
+<table width="100%">
 <tr>
-<td align="center" valign="middle">
-<img src="preview/Windows.gif" width="640"><br>
+<td align="center" valign="middle" width="60%">
+<img src="preview/Windows.gif" width="100%"><br>
 Windows
 </td>
-<td align="center" valign="middle">
-<img src="preview/Android.jpg" width="320"><br>
+<td align="center" valign="middle" width="30%">
+<img src="preview/Android.jpg" width="100%"><br>
 Android
 </td>
 </tr>
