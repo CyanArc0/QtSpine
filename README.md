@@ -184,7 +184,7 @@ Window {
 
 ## 许可证与合规
 
-QtSpine 以 **LGPL v3** 发布，许可证全文见 [`LICENSE`](./LICENSE)。
+QtSpine 以 **LGPL v3** 发布。完整授权文本由 [`COPYING`](./COPYING)（GNU GPL v3）与 [`COPYING.LESSER`](./COPYING.LESSER)（GNU LGPL v3）共同构成。
 
 使用和分发时需注意三层独立义务：
 
@@ -194,7 +194,7 @@ QtSpine 以 **LGPL v3** 发布，许可证全文见 [`LICENSE`](./LICENSE)。
 
 第三方组件与版权声明：
 
-- **Qt 6** — LGPL v3，Copyright (C) The Qt Company Ltd. and other contributors。许可证全文见 [`LICENSE`](./LICENSE)，或 <https://www.gnu.org/licenses/lgpl-3.0.html>
+- **Qt 6** — LGPL v3，Copyright (C) The Qt Company Ltd. and other contributors。许可证全文见 <https://www.gnu.org/licenses/lgpl-3.0.html>
 - **Spine Runtimes (spine-cpp) 4.2** — Spine Runtimes License Agreement，Copyright (C) Esoteric Software LLC。条款见 <http://esotericsoftware.com/spine-runtimes-license>
 
 **使用 QtSpine 构建的软件，最终用户需要自行持有有效的 Spine 许可证。**
