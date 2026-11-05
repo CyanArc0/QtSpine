@@ -92,11 +92,11 @@ project(YourProject VERSION 1.0 LANGUAGES CXX)
 
 find_package(Qt6 REQUIRED COMPONENTS Quick)
 
-qt_standard_project_setup(REQUIRES 6.8)
-
 # ① 推荐：在引入 QtSpine 之前禁用异常与 RTTI
 include(disable-Exceptions.cmake)
 include(disable-RTTI.cmake)
+
+qt_standard_project_setup(REQUIRES 6.8)
 
 # ② 引入 QtSpine：方式一，本地子目录
 add_subdirectory(QtSpine)
