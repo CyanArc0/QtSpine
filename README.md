@@ -180,12 +180,6 @@ Window {
 - 支持 Normal / Additive / Multiply / Screen 四种混合模式，由 Spine 渲染命令自动选择。
 - 渲染基于 Qt RHI（`QQuickRhiItem`），后端由 Qt 选择（Vulkan / Metal / D3D11 / OpenGL）。
 
-### 资源加载说明
-
-- `skeletonSource`、`atlasSource` 支持 `qrc:/` 与 `file:` 路径。
-- Atlas 中的纹理路径相对于 `.atlas` 文件所在目录解析；加载失败时优先检查该路径是否与资源实际位置一致。
-- 资源重新加载时，纹理缓存会自动重建。
-
 ## 许可证与合规
 
 QtSpine 以 **LGPL v3** 发布。完整授权文本由 [`COPYING`](./COPYING)（GNU GPL v3）与 [`COPYING.LESSER`](./COPYING.LESSER)（GNU LGPL v3）共同构成。
