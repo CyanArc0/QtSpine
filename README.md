@@ -129,9 +129,9 @@ target_link_libraries(appYourProject
 )
 ```
 
-引入后，QML 中即可 `import QtSpine`。
-
 ## 在 QML 中使用
+
+CMake 引入后，QML 中即可 `import QtSpine` 并使用 `SpineItem`。
 
 ```qml
 import QtQuick
