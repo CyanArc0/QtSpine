@@ -56,7 +56,7 @@ include(FetchContent)
 FetchContent_Declare(
     QtSpine
     GIT_REPOSITORY https://github.com/CyanArc0/QtSpine.git
-    GIT_TAG 1.0
+    GIT_TAG main
     SOURCE_SUBDIR QtSpine
 )
 FetchContent_MakeAvailable(QtSpine)
@@ -101,7 +101,7 @@ add_subdirectory(QtSpine)
 # FetchContent_Declare(
 #     QtSpine
 #     GIT_REPOSITORY https://github.com/CyanArc0/QtSpine.git
-#     GIT_TAG 1.0
+#     GIT_TAG main
 #     SOURCE_SUBDIR QtSpine
 # )
 # FetchContent_MakeAvailable(QtSpine)
@@ -138,7 +138,7 @@ Window {
     visible: true
 
     SpineItem {
-        // 初始居中；不要用 anchors.centerIn，会与 DragHandler 冲突
+        // 初始居中；不建议用 anchors.centerIn，会与 DragHandler 冲突
         x: (parent.width - width) / 2
         y: (parent.height - height) / 2
 
