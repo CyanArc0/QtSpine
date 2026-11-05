@@ -80,7 +80,7 @@ include(disable-Exceptions.cmake)
 include(disable-RTTI.cmake)
 ```
 
-不引入可能也能正常编译，但部分平台可能会编译失败。
+不引入通常也能编译，但部分平台可能编译失败。
 
 ### 插入位置说明
 
