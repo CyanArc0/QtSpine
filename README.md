@@ -121,8 +121,6 @@ qt_add_qml_module(appYourProject
     URI YourProject
     QML_FILES
         Main.qml
-    RESOURCES
-        p7_bg_gd.png
 )
 
 target_link_libraries(appYourProject
