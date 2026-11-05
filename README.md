@@ -12,7 +12,7 @@
 
 **Android**
 
-![Android](preview/android.gif)
+![Android](preview/android.jpg)
 
 本地构建仓库根目录的 QtSpineExample 示例工程，可查看完整效果。
 
