@@ -157,7 +157,7 @@ Window {
         atlasSource: "qrc:/shaonv.atlas"
         animationName: "a2b2a"
 
-        DragHandler { } // 支持拖动
+        DragHandler { } // 拖拽处理程序
     }
 }
 ```
