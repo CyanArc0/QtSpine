@@ -6,13 +6,18 @@
 
 在线演示（WebAssembly 构建）：<https://CyanArc0.github.io/Columbula/>
 
-**Windows**
-
-![Windows](preview/Windows.gif)
-
-**Android**
-
-![Android](preview/Android.jpg)
+<table>
+<tr>
+<td align="center" valign="middle">
+<img src="preview/Windows.gif" width="640"><br>
+Windows
+</td>
+<td align="center" valign="middle">
+<img src="preview/Android.jpg" width="320"><br>
+Android
+</td>
+</tr>
+</table>
 
 本地构建仓库根目录的 QtSpineExample 示例工程，可查看完整效果。
 
