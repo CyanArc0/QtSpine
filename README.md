@@ -174,18 +174,17 @@ Window {
 
 - 动画在 `track 0` 上循环播放，切换 `animationName` 会替换当前动画。
 - `implicitWidth` / `implicitHeight` 来自 skeleton 数据，可用于布局。
-- width/height 只决定渲染范围，scale 才是模型显示缩放；缩放以 item 中心为原点，不影响 x/y 的居中计算。
+- `width` / `height` 决定渲染范围；`scale` 决定模型显示大小。
 - 纹理在加载时按 atlas 的 `pma` 标志统一转换为预乘 Alpha，渲染端全程按 PMA 处理。
-- Tint Black 的暗色数据来自 skeleton 资源本身，库不额外提供 tint black 控制接口。
+- Tint Black 的暗色数据来自 skeleton 资源，库不额外提供控制接口。
 - 支持 Normal / Additive / Multiply / Screen 四种混合模式，由 Spine 渲染命令自动选择。
-- 渲染基于 Qt RHI（`QQuickRhiItem`），自动适配 Vulkan / Metal / D3D11 / OpenGL 后端。
+- 渲染基于 Qt RHI（`QQuickRhiItem`），后端由 Qt 选择（Vulkan / Metal / D3D11 / OpenGL）。
 
-## 资源加载说明
+### 资源加载说明
 
 - `skeletonSource`、`atlasSource` 支持 `qrc:/` 与 `file:` 路径。
-- Atlas 中的纹理路径相对于 `.atlas` 文件所在目录解析。
-- 资源重新加载时，旧资源按依赖逆序释放，纹理缓存会自动重建。
-- 如果遇到纹理加载失败，检查 atlas 中的图片路径是否与资源实际位置一致。
+- Atlas 中的纹理路径相对于 `.atlas` 文件所在目录解析；加载失败时优先检查该路径是否与资源实际位置一致。
+- 资源重新加载时，纹理缓存会自动重建。
 
 ## 许可证与合规
 
