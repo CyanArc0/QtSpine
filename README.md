@@ -8,11 +8,11 @@
 
 **Windows**
 
-![Windows](preview/windows.gif)
+![Windows](preview/Windows.gif)
 
 **Android**
 
-![Android](preview/android.jpg)
+![Android](preview/Android.jpg)
 
 本地构建仓库根目录的 QtSpineExample 示例工程，可查看完整效果。
 
