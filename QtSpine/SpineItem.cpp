@@ -33,7 +33,7 @@ void SpineItem::set_skeletonSource(const QUrl &new_skeletonSource)
     if (skeletonSource == new_skeletonSource) return;
     skeletonSource = new_skeletonSource;
     emit skeletonSource_changed();
-    load_assets();
+    loadAssets();
 }
 
 QUrl SpineItem::get_atlasSource() const { return atlasSource; }
@@ -43,7 +43,7 @@ void SpineItem::set_atlasSource(const QUrl &new_atlasSource)
     if (atlasSource == new_atlasSource) return;
     atlasSource = new_atlasSource;
     emit atlasSource_changed();
-    load_assets();
+    loadAssets();
 }
 
 QString SpineItem::get_animationName() const { return animationName; }
@@ -68,11 +68,11 @@ void SpineItem::set_animationName(const QString &new_animationName)
     }
 }
 
-void SpineItem::load_assets()
+void SpineItem::loadAssets()
 {
     if (skeletonSource.isEmpty() || atlasSource.isEmpty()) return;
 
-    // 读取所有文件到内存；任何一步失败都直接返回，旧资源不受影响
+    // 读取所有文件到内存
     QFile atlasFile(QQmlFile::urlToLocalFileOrQrc(atlasSource));
     if (!atlasFile.open(QIODevice::ReadOnly)) [[unlikely]] {
         qWarning() << "Spine: cannot open atlas" << atlasSource;

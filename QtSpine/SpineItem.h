@@ -53,11 +53,11 @@ protected:
 
     private:
         std::unique_ptr<QRhiGraphicsPipeline> createPipeline(spine::BlendMode blendMode);
-        QRhiTexture *getOrCreateTexture(void *spineTexKey, QRhiResourceUpdateBatch *rub);
-        QRhiShaderResourceBindings *getOrCreateSrb(void *texKey, QRhiTexture *texture);
+        QRhiTexture *getOrCreateTexture(QtTextureLoader::Texture *spineTexKey, QRhiResourceUpdateBatch *rub);
+        QRhiShaderResourceBindings *getOrCreateSrb(QtTextureLoader::Texture *texKey, QRhiTexture *texture);
 
         struct FrameGroup {
-            void *texKey;
+            QtTextureLoader::Texture *texKey;
             spine::BlendMode blendMode;
             std::size_t vertexOffset;
             std::size_t vertexCount;
@@ -65,7 +65,9 @@ protected:
             std::size_t indexCount;
         };
 
-        const SpineItem *m_item = nullptr;
+        spine::RenderCommand *m_renderCommands = nullptr;
+        QRectF m_itemBounds;
+        QRectF m_skelBounds;
 
         QRhi *m_rhi = nullptr;
         std::unique_ptr<QRhiSampler> m_sampler;
@@ -77,27 +79,22 @@ protected:
         std::unique_ptr<QRhiGraphicsPipeline> m_pipelineMultiply;
         std::unique_ptr<QRhiGraphicsPipeline> m_pipelineScreen;
 
-        std::unordered_map<void*, std::unique_ptr<QRhiTexture>> m_textureCache;
-        std::unordered_map<void*, std::unique_ptr<QRhiShaderResourceBindings>> m_srbCache;
+        std::unordered_map<QtTextureLoader::Texture*, std::unique_ptr<QRhiTexture>> m_textureCache;
+        std::unordered_map<QtTextureLoader::Texture*, std::unique_ptr<QRhiShaderResourceBindings>> m_srbCache;
 
         std::vector<SpineVertex> m_vertexData;
         std::vector<uint32_t> m_indexData;
         std::vector<FrameGroup> m_frameGroups;
 
-        spine::SkeletonRenderer m_skeletonRenderer;
-
         std::unique_ptr<QRhiBuffer> m_vbuf;
         std::unique_ptr<QRhiBuffer> m_ibuf;
-
-        // 纹理预创建标志：仅首帧或资源重载后为 true
-        bool m_texturesPending = true;
     };
 
 protected:
     QQuickRhiItemRenderer *createRenderer() override;
 
 private:
-    void load_assets();
+    void loadAssets();
     void advance();
 
 private:
@@ -112,6 +109,8 @@ private:
     std::unique_ptr<spine::Skeleton> skeleton_ptr;
     std::unique_ptr<spine::AnimationStateData> animationStateData_ptr;
     std::unique_ptr<spine::AnimationState> animationState_ptr;
+
+    spine::SkeletonRenderer skeletonRenderer;
 
     QTimer timer;
     QElapsedTimer times;

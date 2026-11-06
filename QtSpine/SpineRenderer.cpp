@@ -2,8 +2,7 @@
 #include <QMatrix4x4>
 #include <QDebug>
 
-SpineItem::SpineRenderer::SpineRenderer(SpineItem *item)
-    : m_item(item) { }
+SpineItem::SpineRenderer::SpineRenderer(SpineItem *item) { }
 
 void SpineItem::SpineRenderer::initialize(QRhiCommandBuffer *cb)
 {
@@ -26,7 +25,7 @@ void SpineItem::SpineRenderer::initialize(QRhiCommandBuffer *cb)
     m_srbCache.clear();
     //qDeleteAll(m_textureCache);
     m_textureCache.clear();
-    m_texturesPending = true;
+    //m_texturesPending = true;
 
     m_vbuf.reset();
     m_ibuf.reset();
@@ -107,8 +106,8 @@ std::unique_ptr<QRhiGraphicsPipeline> SpineItem::SpineRenderer::createPipeline(s
     layout.setAttributes({
         { 0, 0, QRhiVertexInputAttribute::Float2,     offsetof(SpineVertex, x) },
         { 0, 1, QRhiVertexInputAttribute::Float2,     offsetof(SpineVertex, u) },
-        { 0, 2, QRhiVertexInputAttribute::UNormByte4, offsetof(SpineVertex, rgba) },
-        { 0, 3, QRhiVertexInputAttribute::UNormByte4, offsetof(SpineVertex, dark_rgba) },
+        { 0, 2, QRhiVertexInputAttribute::UNormByte4, offsetof(SpineVertex, argb) },
+        { 0, 3, QRhiVertexInputAttribute::UNormByte4, offsetof(SpineVertex, dark_argb) },
         });
     pipeline->setVertexInputLayout(layout);
 
@@ -162,7 +161,7 @@ std::unique_ptr<QRhiGraphicsPipeline> SpineItem::SpineRenderer::createPipeline(s
 // 纹理：返回裸指针（由 m_textureCache 持有）
 // ─────────────────────────────────────────────────────────────
 
-QRhiTexture *SpineItem::SpineRenderer::getOrCreateTexture(void *spineTexKey, QRhiResourceUpdateBatch *rub)
+QRhiTexture *SpineItem::SpineRenderer::getOrCreateTexture(QtTextureLoader::Texture *spineTexKey, QRhiResourceUpdateBatch *rub)
 {
     if (!spineTexKey || !rub) return nullptr;
 
@@ -198,7 +197,7 @@ QRhiTexture *SpineItem::SpineRenderer::getOrCreateTexture(void *spineTexKey, QRh
 // SRB：返回裸指针（由 m_srbCache 持有）
 // ─────────────────────────────────────────────────────────────
 
-QRhiShaderResourceBindings *SpineItem::SpineRenderer::getOrCreateSrb(void *texKey, QRhiTexture *texture)
+QRhiShaderResourceBindings *SpineItem::SpineRenderer::getOrCreateSrb(QtTextureLoader::Texture *texKey, QRhiTexture *texture)
 {
     auto it = m_srbCache.find(texKey);
     if (it != m_srbCache.end()) {
@@ -226,49 +225,56 @@ QRhiShaderResourceBindings *SpineItem::SpineRenderer::getOrCreateSrb(void *texKe
 void SpineItem::SpineRenderer::synchronize(QQuickRhiItem *item)
 {
     SpineItem *spineItem = static_cast<SpineItem*>(item);
-    if (!spineItem) return;
+
 
     if (spineItem->texturesNeedReset) {
         // 只清缓存，不动 sampler/ubo/pipeline（它们不依赖纹理）
-        //qDeleteAll(m_srbCache);
         m_srbCache.clear();
-        //qDeleteAll(m_textureCache);
         m_textureCache.clear();
         spineItem->texturesNeedReset = false;
-        m_texturesPending = true;
     }
+
+    // 骨架不存在 → 清空，render 直接早退
+    if (!spineItem || !spineItem->skeleton_ptr || !spineItem->skeletonData_ptr) {
+        m_renderCommands = nullptr;
+        return;
+    }
+
+    m_renderCommands = spineItem->skeletonRenderer.render(*spineItem->skeleton_ptr);
+    if (!m_renderCommands) return;
+
+    m_itemBounds = spineItem->boundingRect();
+    const float sx = spineItem->skeletonData_ptr->getX();
+    const float sy = spineItem->skeletonData_ptr->getY();
+    const float sw = spineItem->skeletonData_ptr->getWidth();
+    const float sh = spineItem->skeletonData_ptr->getHeight();
+    m_skelBounds = QRectF(sx, sy,
+                          sw > 0.0f ? sw : 1.0f,
+                          sh > 0.0f ? sh : 1.0f);
 }
 
 void SpineItem::SpineRenderer::render(QRhiCommandBuffer *cb)
 {
-    if (!m_item || !m_item->skeleton_ptr || !m_item->atlas_ptr) return;
+    if (!m_renderCommands) return;
     if (!m_pipelineNormal || !m_sampler || !m_ubo) return;
 
     QRhiRenderTarget *rt = renderTarget();
     if (!rt) [[unlikely]] { qWarning() << "Spine RHI: renderTarget() is null"; return; }
 
-    spine::RenderCommand *commands = m_skeletonRenderer.render(*m_item->skeleton_ptr);
-    if (!commands) return;
-
-    const QRectF bounds = m_item->boundingRect();
-    const float skelX = m_item->skeletonData_ptr->getX();
-    const float skelY = m_item->skeletonData_ptr->getY();
-    const float skelW = m_item->skeletonData_ptr->getWidth()  > 0 ? m_item->skeletonData_ptr->getWidth()  : 1.0f;
-    const float skelH = m_item->skeletonData_ptr->getHeight() > 0 ? m_item->skeletonData_ptr->getHeight() : 1.0f;
     const float scaleX  = 1.0f;//bounds.width()  / skelW;
     const float scaleY  = 1.0f;//bounds.height() / skelH;
-    const float offsetX = bounds.center().x() - skelW / 2;
-    const float offsetY = bounds.center().y() + skelH / 2;
+    const float offsetX = m_itemBounds.center().x() - m_skelBounds.width() / 2;
+    const float offsetY = m_itemBounds.center().y() + m_skelBounds.height() / 2;
 
     m_vertexData.clear();
     m_indexData.clear();
     m_frameGroups.clear();
 
-    spine::RenderCommand *cmd = commands;
+    spine::RenderCommand *cmd = m_renderCommands;
     while (cmd) {
         if (cmd->numVertices == 0) { cmd = cmd->next; continue; }
 
-        void *texKey = cmd->texture;
+        QtTextureLoader::Texture *texKey = static_cast<QtTextureLoader::Texture*>(cmd->texture);
         spine::BlendMode blend = cmd->blendMode;
 
         std::size_t groupVerts = 0, groupIndices = 0;
@@ -292,12 +298,12 @@ void SpineItem::SpineRenderer::render(QRhiCommandBuffer *cb)
 
             for (int32_t i = 0; i < c->numVertices; ++i) {
                 SpineVertex v;
-                v.x = offsetX + (c->positions[i * 2 + 0] - skelX) * scaleX;
-                v.y = offsetY - (c->positions[i * 2 + 1] - skelY) * scaleY;
+                v.x = offsetX + (c->positions[i * 2 + 0] - m_skelBounds.x()) * scaleX;
+                v.y = offsetY - (c->positions[i * 2 + 1] - m_skelBounds.y()) * scaleY;
                 v.u = c->uvs[i * 2 + 0];
                 v.v = c->uvs[i * 2 + 1];
-                v.rgba = c->colors[i];
-                v.dark_rgba = c->darkColors ? c->darkColors[i] : 0;
+                v.argb = c->colors[i];
+                v.dark_argb = c->darkColors ? c->darkColors[i] : 0;
                 m_vertexData.push_back(v);
             }
 
@@ -315,26 +321,23 @@ void SpineItem::SpineRenderer::render(QRhiCommandBuffer *cb)
     QRhiResourceUpdateBatch *rub = m_rhi->nextResourceUpdateBatch();
     if (!rub) [[unlikely]] { qWarning() << "Spine RHI: rub is null"; return; }
 
-    // 纹理仅在首帧或资源重载后预创建，缓存命中后跳过
-    if (m_texturesPending) {
-        for (spine::RenderCommand *c = commands; c; c = c->next) {
-            if (c->numVertices > 0 && c->texture) {
-                getOrCreateTexture(c->texture, rub);
-            }
-        }
-        m_texturesPending = false;
+    // 纹理缺就补建：每帧扫一遍，缓存命中则跳过，成本 O(numCommands)
+    for (auto *c = m_renderCommands; c; c = c->next) {
+        if (c->numVertices > 0 && c->texture
+            && m_textureCache.find(static_cast<QtTextureLoader::Texture*>(c->texture)) == m_textureCache.end())
+            getOrCreateTexture(static_cast<QtTextureLoader::Texture*>(c->texture), rub);
     }
 
     {
-        QMatrix4x4 proj;
-        proj.ortho(0.0f, float(m_item->width()),float(m_item->height()), 0.0f, -1.0f, 1.0f);
+        QMatrix4x4 proj = m_rhi->clipSpaceCorrMatrix();
+        proj.ortho(0.0f, float(m_itemBounds.width()),float(m_itemBounds.height()), 0.0f, -1.0f, 1.0f);
         struct {
             float m[16];
             float opacity;
             float pad[3];
         } ubuf;
         std::memcpy(ubuf.m, proj.constData(), sizeof(ubuf.m));
-        ubuf.opacity = 1.0f;
+        ubuf.opacity = 1.0f;//
         ubuf.pad[0] = ubuf.pad[1] = ubuf.pad[2] = 0.0f;
         rub->updateDynamicBuffer(m_ubo.get(), 0, sizeof(ubuf), &ubuf);
     }

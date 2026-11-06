@@ -1,23 +1,28 @@
 #version 440
 
 layout(location = 0) in vec2 vUV;
-layout(location = 1) in vec4 vColor;
-layout(location = 2) in vec4 vDarkColor;
+layout(location = 1) in vec4 vColor;      // 预乘后的 light tint
+layout(location = 2) in vec4 vDarkColor;  // 未预乘的 dark tint（只用 rgb）
 
 layout(location = 0) out vec4 fragColor;
 
-// 注意：若你没有重写 updateSampledImage() 把纹理绑到 unit 1，
-// Qt Quick 默认绑 unit 0，这里必须改成 binding = 0（或不写 binding）。
+// 与 SpineRenderer.cpp 中 sampledTexture(1, ...) 对应
 layout(binding = 1) uniform sampler2D tex;
 
 void main() {
-    vec4 texColor = texture(tex, vUV);   // PMA 纹理
+    // QtTextureLoader 保证纹理是预乘 alpha（PMA）
+    vec4 texColor = texture(tex, vUV);
 
-    // Spine tint black：纹理越透明（a 越小）dark 权重越大
-    // 再乘 vColor.a 保证整体 opacity 淡出时 dark 一起淡出（维持 PMA 上界）
-    float darkWeight = vDarkColor.a * (1.0 - texColor.a) * vColor.a;
+    // 最终 alpha：纹理 alpha × 顶点 alpha（顶点 alpha 已含 item opacity）
+    float a = texColor.a * vColor.a;
 
-    fragColor.a   = texColor.a * vColor.a;
-    fragColor.rgb = texColor.rgb * vColor.rgb        // 主色（PMA，已是预乘乘积）
-                  + vDarkColor.rgb * darkWeight;     // 暗部贡献
+    // light：PMA 纹理 × PMA 顶点色
+    vec3 light = texColor.rgb * vColor.rgb;
+
+    // Spine tint black：纹理里越黑的部分越偏向 dark。
+    // 对 PMA 纹理，texColor.a - texColor.rgb == texColor.a * (1 - c)，
+    // c 是未预乘的颜色；因此权重来自“黑度”，不是透明度 (1 - texColor.a)。
+    vec3 dark = (texColor.a - texColor.rgb) * vDarkColor.rgb;
+
+    fragColor = vec4(light + dark, a);
 }

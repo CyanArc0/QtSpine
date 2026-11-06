@@ -3,6 +3,6 @@
 struct SpineVertex {
     float x, y;
     float u, v;
-    uint32_t rgba;
-    uint32_t dark_rgba;   // Tint Black 暗色，无该特性时填 0
+    uint32_t argb;
+    uint32_t dark_argb;   // Tint Black 暗色，无该特性时填 0
 };
