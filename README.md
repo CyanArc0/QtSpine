@@ -125,7 +125,7 @@ qt_add_qml_module(appYourProject
 
 target_link_libraries(appYourProject
     PRIVATE Qt6::Quick
-    PRIVATE QtSpine # ③ 无论用哪种引入方式，都需要链接 QtSpine
+    QtSpine # ③ 无论用哪种引入方式，都需要链接 QtSpine
 )
 ```
 
