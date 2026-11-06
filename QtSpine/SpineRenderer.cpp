@@ -2,8 +2,6 @@
 #include <QMatrix4x4>
 #include <QDebug>
 
-SpineItem::SpineRenderer::SpineRenderer(SpineItem *item) { }
-
 void SpineItem::SpineRenderer::initialize(QRhiCommandBuffer *cb)
 {
     QRhi *currentRhi = rhi();

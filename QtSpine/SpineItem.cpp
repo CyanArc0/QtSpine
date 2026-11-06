@@ -15,7 +15,7 @@ QByteArray SpineItem::readResource(const QString &path)
     return f.readAll();
 }
 
-SpineItem::SpineItem()
+SpineItem::SpineItem(QQuickRhiItem *parent) : QQuickRhiItem(parent)
 {
     setFlag(ItemHasContents, true);//允许自定义场景图内容
     setAlphaBlending(true);//背景透明
@@ -163,5 +163,5 @@ void SpineItem::advance()
 
 QQuickRhiItemRenderer *SpineItem::createRenderer()
 {
-    return new SpineRenderer(this);
+    return new SpineRenderer;
 }

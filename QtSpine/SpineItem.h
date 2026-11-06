@@ -24,7 +24,7 @@ class SpineItem : public QQuickRhiItem
     Q_PROPERTY(QString animationName READ get_animationName WRITE set_animationName NOTIFY animationName_changed)
 
 public:
-    SpineItem();
+    explicit SpineItem(QQuickRhiItem *parent = nullptr);
 
     QUrl get_skeletonSource() const;
     void set_skeletonSource(const QUrl&);
@@ -45,8 +45,6 @@ protected:
     class SpineRenderer : public QQuickRhiItemRenderer
     {
     public:
-        explicit SpineRenderer(SpineItem *item);
-
         void initialize(QRhiCommandBuffer *cb) override;
         void synchronize(QQuickRhiItem *item) override;
         void render(QRhiCommandBuffer *cb) override;
