@@ -115,5 +115,4 @@ private:
     int64_t time = 0;
 
     bool texturesNeedReset = false;
-
 };
