@@ -112,7 +112,7 @@ private:
 
     QTimer timer;
     QElapsedTimer times;
-    int64_t lastTime = 0;
+    int64_t time = 0;
 
     bool texturesNeedReset = false;
 

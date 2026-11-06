@@ -224,7 +224,6 @@ void SpineItem::SpineRenderer::synchronize(QQuickRhiItem *item)
 {
     SpineItem *spineItem = static_cast<SpineItem*>(item);
 
-
     if (spineItem->texturesNeedReset) {
         // 只清缓存，不动 sampler/ubo/pipeline（它们不依赖纹理）
         m_srbCache.clear();
