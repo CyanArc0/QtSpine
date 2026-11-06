@@ -141,7 +141,7 @@ void SpineItem::loadAssets()
     setImplicitHeight(skeletonData_ptr->getHeight());
 
     texturesNeedReset = true;
-    lastTime = times.elapsed();
+    time = times.elapsed();
     update();
 }
 
@@ -150,8 +150,8 @@ void SpineItem::advance()
     if (!animationState_ptr || !skeleton_ptr) return;
 
     const qint64 now = times.elapsed();
-    float delta = (now - lastTime) / 1000.0f;
-    lastTime = now;
+    float delta = (now - time) / 1000.0f;
+    time = now;
 
     animationState_ptr->update(delta);
     animationState_ptr->apply(*skeleton_ptr);
