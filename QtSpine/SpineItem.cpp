@@ -21,7 +21,7 @@ SpineItem::SpineItem(QQuickRhiItem *parent) : QQuickRhiItem(parent)
     setAlphaBlending(true);//背景透明
 
     connect(&timer, &QTimer::timeout, this, &SpineItem::advance);
-    timer.setInterval(16);
+    timer.setInterval(1000 / 60);
     timer.start();
     times.start();
 }
@@ -152,6 +152,11 @@ void SpineItem::advance()
     const qint64 now = times.elapsed();
     float delta = (now - time) / 1000.0f;
     time = now;
+
+    // 卡顿保护：单帧最多推进 33ms（约 30fps 的最低保障）
+    // 防止 UI 阻塞、休眠恢复等场景下 delta 过大导致动画跳跃
+    if(delta > 1.0f / 30.0f)
+        delta = 1.0f / 30.0f;
 
     animationState_ptr->update(delta);
     animationState_ptr->apply(*skeleton_ptr);

@@ -1,6 +1,8 @@
 #include "SpineItem.h"
 #include <QMatrix4x4>
 #include <QDebug>
+#include <cstring>
+#include <utility>
 
 void SpineItem::SpineRenderer::initialize(QRhiCommandBuffer *cb)
 {
