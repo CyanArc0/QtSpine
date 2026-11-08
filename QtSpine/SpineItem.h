@@ -23,12 +23,12 @@ class SpineItem : public QQuickRhiItem
     Q_PROPERTY(QUrl atlasSource READ get_atlasSource WRITE set_atlasSource NOTIFY atlasSourceChanged)
     Q_PROPERTY(QString animationName READ get_animationName WRITE set_animationName NOTIFY animationNameChanged)
 
+    Q_PROPERTY(qreal skeletonScale MEMBER skeletonScale NOTIFY skeletonScaleChanged)
     Q_PROPERTY(qreal leftPadding   MEMBER leftPadding NOTIFY leftPaddingChanged)
     Q_PROPERTY(qreal topPadding    MEMBER topPadding NOTIFY topPaddingChanged)
     Q_PROPERTY(qreal rightPadding  MEMBER rightPadding NOTIFY rightPaddingChanged)
     Q_PROPERTY(qreal bottomPadding MEMBER bottomPadding NOTIFY bottomPaddingChanged)
 
-    Q_PROPERTY(qreal skeletonScale MEMBER skeletonScale NOTIFY skeletonScaleChanged)
 
 public:
     explicit SpineItem(QQuickRhiItem *parent = nullptr);
@@ -45,12 +45,11 @@ signals:
     void atlasSourceChanged();
     void animationNameChanged();
 
+    void skeletonScaleChanged();
     void leftPaddingChanged();
     void topPaddingChanged();
     void rightPaddingChanged();
     void bottomPaddingChanged();
-
-    void skeletonScaleChanged();
 
 protected:
     static QByteArray readResource(const QString &path);
@@ -117,11 +116,11 @@ private:
     QUrl atlasSource;
     QString animationName;
 
+    qreal skeletonScale = 1.0;
     qreal leftPadding = 0;
     qreal topPadding = 0;
     qreal rightPadding = 0;
     qreal bottomPadding = 0;
-    qreal skeletonScale = 1.0;
 
     QtTextureLoader textureLoader;
 
