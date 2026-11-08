@@ -28,6 +28,8 @@ class SpineItem : public QQuickRhiItem
     Q_PROPERTY(qreal rightPadding  MEMBER rightPadding NOTIFY rightPaddingChanged)
     Q_PROPERTY(qreal bottomPadding MEMBER bottomPadding NOTIFY bottomPaddingChanged)
 
+    Q_PROPERTY(qreal skeletonScale MEMBER skeletonScale NOTIFY skeletonScaleChanged)
+
 public:
     explicit SpineItem(QQuickRhiItem *parent = nullptr);
 
@@ -47,6 +49,8 @@ signals:
     void topPaddingChanged();
     void rightPaddingChanged();
     void bottomPaddingChanged();
+
+    void skeletonScaleChanged();
 
 protected:
     static QByteArray readResource(const QString &path);
@@ -91,13 +95,10 @@ protected:
         std::unique_ptr<QRhiGraphicsPipeline> m_pipelineScreen;
 
         spine::RenderCommand *m_renderCommands = nullptr;
-        QRectF m_itemBounds;
-        QRectF m_skelBounds;
 
-        float scaleX;
-        float scaleY;
-        float offsetX;
-        float offsetY;
+        float m_vertexScale = 1.0;
+        QVector2D m_vertexTranslate;
+        QVector2D m_projectionSize;
 
         std::vector<SpineVertex> m_vertexData;
         std::vector<uint32_t> m_indexData;
@@ -120,6 +121,7 @@ private:
     qreal topPadding = 0;
     qreal rightPadding = 0;
     qreal bottomPadding = 0;
+    qreal skeletonScale = 1.0;
 
     QtTextureLoader textureLoader;
 

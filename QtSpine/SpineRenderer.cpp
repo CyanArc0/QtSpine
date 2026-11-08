@@ -239,20 +239,36 @@ void SpineItem::SpineRenderer::synchronize(QQuickRhiItem *item)
     m_renderCommands = spineItem->skeletonRenderer.render(*spineItem->skeleton_ptr);
     if (!m_renderCommands) return;
 
-    m_itemBounds = spineItem->boundingRect();
-    const float sx = spineItem->skeletonData_ptr->getX();
-    const float sy = spineItem->skeletonData_ptr->getY();
-    const float sw = spineItem->skeletonData_ptr->getWidth();//maybe 0
-    const float sh = spineItem->skeletonData_ptr->getHeight();//maybe 0
-    m_skelBounds = QRectF(sx, sy,
-                          sw > 0.0f ? sw : 1.0f,
-                          sh > 0.0f ? sh : 1.0f);
+    // ── 1. FBO 尺寸（投影矩阵用） ──
+    m_projectionSize = {static_cast<float>(spineItem->width()), static_cast<float>(spineItem->height())};
 
-    scaleX  = 1.0;//m_itemBounds.width()  / m_skelBounds.width();
-    scaleY  = 1.0;//m_itemBounds.height() / m_skelBounds.height();
-    offsetX = m_itemBounds.center().x() - m_skelBounds.width() / 2 + (spineItem->leftPadding-spineItem->rightPadding)/2;
-    offsetY = m_itemBounds.center().y() + m_skelBounds.height() / 2 + (spineItem->topPadding-spineItem->bottomPadding)/2;
+    // ── 2. 内容区与锚点（padding 内缩后的中心） ──
+    const float padL = static_cast<float>(spineItem->leftPadding);
+    const float padT = static_cast<float>(spineItem->topPadding);
+    const float padR = static_cast<float>(spineItem->rightPadding);
+    const float padB = static_cast<float>(spineItem->bottomPadding);
 
+    const float contentW = m_projectionSize.x() - padL - padR;
+    const float contentH = m_projectionSize.y() - padT - padB;
+    const float anchorX  = padL + contentW * 0.5f;
+    const float anchorY  = padT + contentH * 0.5f;
+
+    // ── 3. 缩放（clamp 防负值翻转） ──
+    const float s = std::max(0.0f, static_cast<float>(spineItem->skeletonScale));
+
+    // ── 4. 骨架 setup-pose 参数 ──
+    const float skelX = spineItem->skeletonData_ptr->getX();
+    const float skelY = spineItem->skeletonData_ptr->getY();
+    const float skelW = spineItem->skeletonData_ptr->getWidth();
+    const float skelH = spineItem->skeletonData_ptr->getHeight();
+
+    // ── 5. 模型左上角（含居中）→ 合并 skelX/skelY → tx/ty ──
+    // 防御：skelW/H 为 0 时居中项为 0，不产生 NaN（乘法不除零）
+    const float originX = anchorX - skelW * s * 0.5f;
+    const float originY = anchorY + skelH * s * 0.5f;
+
+    m_vertexScale = s;
+    m_vertexTranslate = {originX - skelX * s, originY + skelY * s};   // v.y = -pos.y * s + m_ty
 }
 
 void SpineItem::SpineRenderer::render(QRhiCommandBuffer *cb)
@@ -297,8 +313,10 @@ void SpineItem::SpineRenderer::render(QRhiCommandBuffer *cb)
 
             for (int32_t i = 0; i < c->numVertices; ++i) {
                 SpineVertex v;
-                v.x = offsetX + (c->positions[i * 2 + 0] - m_skelBounds.x()) * scaleX;
-                v.y = offsetY - (c->positions[i * 2 + 1] - m_skelBounds.y()) * scaleY;
+                //v.x = offsetX + (c->positions[i * 2 + 0] - m_skelBounds.x()) * scaleX;
+                //v.y = offsetY - (c->positions[i * 2 + 1] - m_skelBounds.y()) * scaleY;
+                v.x = +c->positions[i * 2 + 0] * m_vertexScale + m_vertexTranslate.x();
+                v.y = -c->positions[i * 2 + 1] * m_vertexScale + m_vertexTranslate.y();
                 v.u = c->uvs[i * 2 + 0];
                 v.v = c->uvs[i * 2 + 1];
                 v.argb = c->colors[i];
@@ -329,14 +347,14 @@ void SpineItem::SpineRenderer::render(QRhiCommandBuffer *cb)
 
     {
         QMatrix4x4 proj = m_rhi->clipSpaceCorrMatrix();
-        proj.ortho(0.0f, float(m_itemBounds.width()),float(m_itemBounds.height()), 0.0f, -1.0f, 1.0f);
+        proj.ortho(0.0f, m_projectionSize.x(),m_projectionSize.y(), 0.0f, -1.0f, 1.0f);
         struct {
             float m[16];
             float opacity;
             float pad[3];
         } ubuf;
         std::memcpy(ubuf.m, proj.constData(), sizeof(ubuf.m));
-        ubuf.opacity = 1.0f;//
+        ubuf.opacity = 1.0f;
         ubuf.pad[0] = ubuf.pad[1] = ubuf.pad[2] = 0.0f;
         rub->updateDynamicBuffer(m_ubo.get(), 0, sizeof(ubuf), &ubuf);
     }

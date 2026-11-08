@@ -24,16 +24,16 @@ ApplicationWindow {
     Item {
         x: (parent.width - width) / 2
         y: (parent.height - height) / 2
-        width: columbula.implicitWidth
-        height: columbula.implicitHeight
+        width: columbula.implicitWidth*columbula.skeletonScale
+        height: columbula.implicitHeight*columbula.skeletonScale
 
-        scale: 0.6
         SpineItem {
             id: columbula
             x: -leftPadding
             y: -topPadding
-            width: implicitWidth+leftPadding+rightPadding
-            height: implicitHeight+topPadding+bottomPadding/2
+            width: implicitWidth*skeletonScale+leftPadding+rightPadding
+            height: implicitHeight*skeletonScale+topPadding+bottomPadding/2
+            skeletonScale: 0.6
             leftPadding: 103.52 + 50
             rightPadding: 84.37
             topPadding: 28.247
