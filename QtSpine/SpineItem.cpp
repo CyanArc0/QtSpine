@@ -10,6 +10,7 @@ QByteArray SpineItem::readResource(const QString &path)
     QFile f(path);
     if (!f.open(QIODevice::ReadOnly)) [[unlikely]] {
         qWarning() << "Spine RHI: cannot open resource" << path;
+        //throw_error "Spine RHI: cannot open resource", path;
         return {};
     }
     return f.readAll();
@@ -32,7 +33,7 @@ void SpineItem::set_skeletonSource(const QUrl &new_skeletonSource)
 {
     if (skeletonSource == new_skeletonSource) return;
     skeletonSource = new_skeletonSource;
-    emit skeletonSource_changed();
+    emit skeletonSourceChanged();
     loadAssets();
 }
 
@@ -42,7 +43,7 @@ void SpineItem::set_atlasSource(const QUrl &new_atlasSource)
 {
     if (atlasSource == new_atlasSource) return;
     atlasSource = new_atlasSource;
-    emit atlasSource_changed();
+    emit atlasSourceChanged();
     loadAssets();
 }
 
@@ -52,7 +53,7 @@ void SpineItem::set_animationName(const QString &new_animationName)
 {
     if (animationName == new_animationName) return;
     animationName = new_animationName;
-    emit animationName_changed();
+    emit animationNameChanged();
     if (!skeletonData_ptr || !animationState_ptr) return;
     if (!animationName.isEmpty()) {
         spine::Animation* animation = skeletonData_ptr->findAnimation(

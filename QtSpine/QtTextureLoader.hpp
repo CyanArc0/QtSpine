@@ -1,6 +1,7 @@
 #pragma once
 #include <spine/TextureLoader.h>
 #include <spine/Atlas.h>
+#include <spine/SpineString.h>
 #include <QImage>
 #include <QString>
 #include <QDebug>

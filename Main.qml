@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Controls
 import QtQuick.Controls.Basic
 import QtSpine
 
@@ -20,23 +21,50 @@ ApplicationWindow {
         fillMode: Image.PreserveAspectCrop
     }
 
-    SpineItem {
+    Item {
         x: (parent.width - width) / 2
         y: (parent.height - height) / 2
-        width: implicitWidth * 1.5
-        height: implicitHeight * 1.5
+        width: columbula.implicitWidth
+        height: columbula.implicitHeight
+
         scale: 0.6
-        skeletonSource: "qrc:/shaonv.json"
-        atlasSource: "qrc:/shaonv.atlas"
-        animationName: "a2b2a"
-        DragHandler { } // 拖拽处理
-        /*
+        SpineItem {
+            id: columbula
+            x: -leftPadding
+            y: -topPadding
+            width: implicitWidth+leftPadding+rightPadding
+            height: implicitHeight+topPadding+bottomPadding/2
+            leftPadding: 103.52 + 50
+            rightPadding: 84.37
+            topPadding: 28.247
+            bottomPadding: 38.203
+            skeletonSource: "qrc:/shaonv.json"
+            atlasSource: "qrc:/shaonv.atlas"
+            animationName: "a2b2a"
+
+            Rectangle { // 边框
+                anchors.fill: parent
+                color: transparent
+                border.color: "red"
+                border.width: 2 / parent.scale
+            }
+            ///*
+
+            //*/
+        }
+
         Rectangle { // 边框
             anchors.fill: parent
             color: transparent
             border.color: dodgerblue
             border.width: 1 / parent.scale
         }
-        */
+        DragHandler { } // 拖拽处理
+
+
     }
+
+
+
+
 }

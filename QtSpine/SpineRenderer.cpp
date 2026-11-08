@@ -3,6 +3,7 @@
 #include <QDebug>
 #include <cstring>
 #include <utility>
+#include <algorithm>
 
 void SpineItem::SpineRenderer::initialize(QRhiCommandBuffer *cb)
 {
@@ -21,16 +22,12 @@ void SpineItem::SpineRenderer::initialize(QRhiCommandBuffer *cb)
     m_pipelineNormal.reset();
     m_dummySrb.reset();
 
-    //qDeleteAll(m_srbCache);
     m_srbCache.clear();
-    //qDeleteAll(m_textureCache);
     m_textureCache.clear();
-    //m_texturesPending = true;
 
-    m_vbuf.reset();
     m_ibuf.reset();
+    m_vbuf.reset();
 
-    // 此时已无任何对象引用 ubo/sampler，安全释放
     m_ubo.reset();
     m_sampler.reset();
 
@@ -245,11 +242,17 @@ void SpineItem::SpineRenderer::synchronize(QQuickRhiItem *item)
     m_itemBounds = spineItem->boundingRect();
     const float sx = spineItem->skeletonData_ptr->getX();
     const float sy = spineItem->skeletonData_ptr->getY();
-    const float sw = spineItem->skeletonData_ptr->getWidth();
-    const float sh = spineItem->skeletonData_ptr->getHeight();
+    const float sw = spineItem->skeletonData_ptr->getWidth();//maybe 0
+    const float sh = spineItem->skeletonData_ptr->getHeight();//maybe 0
     m_skelBounds = QRectF(sx, sy,
                           sw > 0.0f ? sw : 1.0f,
                           sh > 0.0f ? sh : 1.0f);
+
+    scaleX  = 1.0;//m_itemBounds.width()  / m_skelBounds.width();
+    scaleY  = 1.0;//m_itemBounds.height() / m_skelBounds.height();
+    offsetX = m_itemBounds.center().x() - m_skelBounds.width() / 2 + (spineItem->leftPadding-spineItem->rightPadding)/2;
+    offsetY = m_itemBounds.center().y() + m_skelBounds.height() / 2 + (spineItem->topPadding-spineItem->bottomPadding)/2;
+
 }
 
 void SpineItem::SpineRenderer::render(QRhiCommandBuffer *cb)
@@ -260,10 +263,7 @@ void SpineItem::SpineRenderer::render(QRhiCommandBuffer *cb)
     QRhiRenderTarget *rt = renderTarget();
     if (!rt) [[unlikely]] { qWarning() << "Spine RHI: renderTarget() is null"; return; }
 
-    const float scaleX  = 1.0f;//bounds.width()  / skelW;
-    const float scaleY  = 1.0f;//bounds.height() / skelH;
-    const float offsetX = m_itemBounds.center().x() - m_skelBounds.width() / 2;
-    const float offsetY = m_itemBounds.center().y() + m_skelBounds.height() / 2;
+    //const float
 
     m_vertexData.clear();
     m_indexData.clear();

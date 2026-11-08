@@ -19,9 +19,14 @@ class SpineItem : public QQuickRhiItem
 {
     Q_OBJECT
     QML_ELEMENT
-    Q_PROPERTY(QUrl skeletonSource READ get_skeletonSource WRITE set_skeletonSource NOTIFY skeletonSource_changed)
-    Q_PROPERTY(QUrl atlasSource READ get_atlasSource WRITE set_atlasSource NOTIFY atlasSource_changed)
-    Q_PROPERTY(QString animationName READ get_animationName WRITE set_animationName NOTIFY animationName_changed)
+    Q_PROPERTY(QUrl skeletonSource READ get_skeletonSource WRITE set_skeletonSource NOTIFY skeletonSourceChanged)
+    Q_PROPERTY(QUrl atlasSource READ get_atlasSource WRITE set_atlasSource NOTIFY atlasSourceChanged)
+    Q_PROPERTY(QString animationName READ get_animationName WRITE set_animationName NOTIFY animationNameChanged)
+
+    Q_PROPERTY(qreal leftPadding   MEMBER leftPadding NOTIFY leftPaddingChanged)
+    Q_PROPERTY(qreal topPadding    MEMBER topPadding NOTIFY topPaddingChanged)
+    Q_PROPERTY(qreal rightPadding  MEMBER rightPadding NOTIFY rightPaddingChanged)
+    Q_PROPERTY(qreal bottomPadding MEMBER bottomPadding NOTIFY bottomPaddingChanged)
 
 public:
     explicit SpineItem(QQuickRhiItem *parent = nullptr);
@@ -34,9 +39,14 @@ public:
     void set_animationName(const QString&);
 
 signals:
-    void skeletonSource_changed();
-    void atlasSource_changed();
-    void animationName_changed();
+    void skeletonSourceChanged();
+    void atlasSourceChanged();
+    void animationNameChanged();
+
+    void leftPaddingChanged();
+    void topPaddingChanged();
+    void rightPaddingChanged();
+    void bottomPaddingChanged();
 
 protected:
     static QByteArray readResource(const QString &path);
@@ -63,29 +73,35 @@ protected:
             std::size_t indexCount;
         };
 
-        spine::RenderCommand *m_renderCommands = nullptr;
-        QRectF m_itemBounds;
-        QRectF m_skelBounds;
-
         QRhi *m_rhi = nullptr;
+
         std::unique_ptr<QRhiSampler> m_sampler;
         std::unique_ptr<QRhiBuffer>  m_ubo;
+
+        std::unique_ptr<QRhiBuffer> m_vbuf;
+        std::unique_ptr<QRhiBuffer> m_ibuf;
+
+        std::unordered_map<QtTextureLoader::Texture*, std::unique_ptr<QRhiTexture>> m_textureCache;
         std::unique_ptr<QRhiShaderResourceBindings> m_dummySrb;
 
+        std::unordered_map<QtTextureLoader::Texture*, std::unique_ptr<QRhiShaderResourceBindings>> m_srbCache;
         std::unique_ptr<QRhiGraphicsPipeline> m_pipelineNormal;
         std::unique_ptr<QRhiGraphicsPipeline> m_pipelineAdditive;
         std::unique_ptr<QRhiGraphicsPipeline> m_pipelineMultiply;
         std::unique_ptr<QRhiGraphicsPipeline> m_pipelineScreen;
 
-        std::unordered_map<QtTextureLoader::Texture*, std::unique_ptr<QRhiTexture>> m_textureCache;
-        std::unordered_map<QtTextureLoader::Texture*, std::unique_ptr<QRhiShaderResourceBindings>> m_srbCache;
+        spine::RenderCommand *m_renderCommands = nullptr;
+        QRectF m_itemBounds;
+        QRectF m_skelBounds;
+
+        float scaleX;
+        float scaleY;
+        float offsetX;
+        float offsetY;
 
         std::vector<SpineVertex> m_vertexData;
         std::vector<uint32_t> m_indexData;
         std::vector<FrameGroup> m_frameGroups;
-
-        std::unique_ptr<QRhiBuffer> m_vbuf;
-        std::unique_ptr<QRhiBuffer> m_ibuf;
     };
 
 protected:
@@ -99,6 +115,11 @@ private:
     QUrl skeletonSource;
     QUrl atlasSource;
     QString animationName;
+
+    qreal leftPadding = 0;
+    qreal topPadding = 0;
+    qreal rightPadding = 0;
+    qreal bottomPadding = 0;
 
     QtTextureLoader textureLoader;
 
