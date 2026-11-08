@@ -268,7 +268,7 @@ void SpineItem::SpineRenderer::synchronize(QQuickRhiItem *item)
     const float originY = anchorY + skelH * s * 0.5f;
 
     m_vertexScale = s;
-    m_vertexTranslate = {originX - skelX * s, originY + skelY * s};   // v.y = -pos.y * s + m_ty
+    m_vertexTranslate = {originX - skelX * s, originY + skelY * s};
 }
 
 void SpineItem::SpineRenderer::render(QRhiCommandBuffer *cb)
@@ -347,7 +347,7 @@ void SpineItem::SpineRenderer::render(QRhiCommandBuffer *cb)
 
     {
         QMatrix4x4 proj = m_rhi->clipSpaceCorrMatrix();
-        proj.ortho(0.0f, m_projectionSize.x(),m_projectionSize.y(), 0.0f, -1.0f, 1.0f);
+        proj.ortho(0.0f, m_projectionSize.x(), m_projectionSize.y(), 0.0f, -1.0f, 1.0f);
         struct {
             float m[16];
             float opacity;

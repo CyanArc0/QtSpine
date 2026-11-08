@@ -26,45 +26,43 @@ ApplicationWindow {
         y: (parent.height - height) / 2
         width: columbula.implicitWidth*columbula.skeletonScale
         height: columbula.implicitHeight*columbula.skeletonScale
+        scale: 0.6
 
         SpineItem {
             id: columbula
+
             x: -leftPadding
             y: -topPadding
             width: implicitWidth*skeletonScale+leftPadding+rightPadding
             height: implicitHeight*skeletonScale+topPadding+bottomPadding/2
-            skeletonScale: 0.6
+
+            skeletonScale: 1.0
+
             leftPadding: 103.52 + 50
             rightPadding: 84.37
             topPadding: 28.247
             bottomPadding: 38.203
+
             skeletonSource: "qrc:/shaonv.json"
             atlasSource: "qrc:/shaonv.atlas"
             animationName: "a2b2a"
-
+            ///*
             Rectangle { // 边框
                 anchors.fill: parent
                 color: transparent
                 border.color: "red"
                 border.width: 2 / parent.scale
             }
-            ///*
-
             //*/
         }
-
+        ///*
         Rectangle { // 边框
             anchors.fill: parent
             color: transparent
             border.color: dodgerblue
             border.width: 1 / parent.scale
         }
+        //*/
         DragHandler { } // 拖拽处理
-
-
     }
-
-
-
-
 }
