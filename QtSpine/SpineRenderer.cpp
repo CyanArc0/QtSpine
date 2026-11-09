@@ -1,13 +1,25 @@
 #include "SpineItem.h"
 #include <QMatrix4x4>
+#include <QFile>
 #include <QDebug>
 #include <cstring>
 #include <utility>
 #include <algorithm>
 
-void SpineItem::SpineRenderer::initialize(QRhiCommandBuffer *cb)
+namespace {
+    QByteArray readResource(const QString &path)
+    {
+        QFile f(path);
+        if (!f.open(QIODevice::ReadOnly)) [[unlikely]] {
+            qWarning() << "Spine RHI: cannot open resource" << path;
+            return {};
+        }
+        return f.readAll();
+    }
+}
+void SpineItem::SpineRenderer::initialize(QRhiCommandBuffer* cb)
 {
-    QRhi *currentRhi = rhi();
+    QRhi* currentRhi = rhi();
     // 如果 RHI 没变，且核心资源已在，直接返回。
     if (m_rhi == currentRhi && m_sampler && m_ubo && m_dummySrb
         && m_pipelineNormal && m_pipelineAdditive && m_pipelineMultiply && m_pipelineScreen) {
@@ -140,7 +152,7 @@ std::unique_ptr<QRhiGraphicsPipeline> SpineItem::SpineRenderer::createPipeline(s
     pipeline->setTargetBlends({ blend });
     pipeline->setTopology(QRhiGraphicsPipeline::Triangles);
 
-    QRhiRenderTarget *rt = renderTarget();
+    QRhiRenderTarget* rt = renderTarget();
     if (!rt) [[unlikely]] {
         qWarning() << "Spine RHI: renderTarget() is null, cannot create pipeline";
         return nullptr;
@@ -158,7 +170,7 @@ std::unique_ptr<QRhiGraphicsPipeline> SpineItem::SpineRenderer::createPipeline(s
 // 纹理：返回裸指针（由 m_textureCache 持有）
 // ─────────────────────────────────────────────────────────────
 
-QRhiTexture *SpineItem::SpineRenderer::getOrCreateTexture(QtTextureLoader::Texture *spineTexKey, QRhiResourceUpdateBatch *rub)
+QRhiTexture* SpineItem::SpineRenderer::getOrCreateTexture(QtTextureLoader::Texture* spineTexKey, QRhiResourceUpdateBatch* rub)
 {
     if (!spineTexKey || !rub) return nullptr;
 
@@ -166,14 +178,14 @@ QRhiTexture *SpineItem::SpineRenderer::getOrCreateTexture(QtTextureLoader::Textu
     if (it != m_textureCache.end()) return it->second.get();
 
     // ✅ 直接拿已处理好的 QImage
-    QImage *image = static_cast<QtTextureLoader::Texture*>(spineTexKey);
+    QImage* image = static_cast<QtTextureLoader::Texture*>(spineTexKey);
     if (!image || image->isNull()) [[unlikely]] {
         qWarning() << "Spine RHI: QImage is null";
         return nullptr;
     }
 
     const QRhiTexture::Flags flags = QRhiTexture::UsedAsTransferSource | QRhiTexture::MipMapped | QRhiTexture::UsedWithGenerateMips;
-    QRhiTexture *texture = m_rhi->newTexture(QRhiTexture::RGBA8, image->size(), 1, flags);
+    QRhiTexture* texture = m_rhi->newTexture(QRhiTexture::RGBA8, image->size(), 1, flags);
     if (!texture) [[unlikely]] {
         qWarning() << "Spine RHI: newTexture returned null";
         return nullptr;
@@ -184,7 +196,7 @@ QRhiTexture *SpineItem::SpineRenderer::getOrCreateTexture(QtTextureLoader::Textu
         return nullptr;
     }
 
-    rub->uploadTexture(texture, *image);
+    rub->uploadTexture(texture,* image);
     rub->generateMips(texture);
     m_textureCache.emplace(spineTexKey, std::unique_ptr<QRhiTexture>(texture));
     return texture;
@@ -194,14 +206,14 @@ QRhiTexture *SpineItem::SpineRenderer::getOrCreateTexture(QtTextureLoader::Textu
 // SRB：返回裸指针（由 m_srbCache 持有）
 // ─────────────────────────────────────────────────────────────
 
-QRhiShaderResourceBindings *SpineItem::SpineRenderer::getOrCreateSrb(QtTextureLoader::Texture *texKey, QRhiTexture *texture)
+QRhiShaderResourceBindings* SpineItem::SpineRenderer::getOrCreateSrb(QtTextureLoader::Texture* texKey, QRhiTexture* texture)
 {
     auto it = m_srbCache.find(texKey);
     if (it != m_srbCache.end()) {
         return it->second.get();
     }
 
-    QRhiShaderResourceBindings *srb = m_rhi->newShaderResourceBindings();
+    QRhiShaderResourceBindings* srb = m_rhi->newShaderResourceBindings();
     if (!srb) [[unlikely]] {
         qWarning() << "Spine RHI: newShaderResourceBindings returned null";
         return nullptr;
@@ -219,9 +231,9 @@ QRhiShaderResourceBindings *SpineItem::SpineRenderer::getOrCreateSrb(QtTextureLo
     return srb;
 }
 
-void SpineItem::SpineRenderer::synchronize(QQuickRhiItem *item)
+void SpineItem::SpineRenderer::synchronize(QQuickRhiItem* item)
 {
-    SpineItem *spineItem = static_cast<SpineItem*>(item);
+    SpineItem* spineItem = static_cast<SpineItem*>(item);
 
     if (spineItem->texturesNeedReset) {
         // 只清缓存，不动 sampler/ubo/pipeline（它们不依赖纹理）
@@ -271,12 +283,12 @@ void SpineItem::SpineRenderer::synchronize(QQuickRhiItem *item)
     m_vertexTranslate = {originX - skelX * s, originY + skelY * s};
 }
 
-void SpineItem::SpineRenderer::render(QRhiCommandBuffer *cb)
+void SpineItem::SpineRenderer::render(QRhiCommandBuffer* cb)
 {
     if (!m_renderCommands) return;
     if (!m_pipelineNormal || !m_sampler || !m_ubo) return;
 
-    QRhiRenderTarget *rt = renderTarget();
+    QRhiRenderTarget* rt = renderTarget();
     if (!rt) [[unlikely]] { qWarning() << "Spine RHI: renderTarget() is null"; return; }
 
     //const float
@@ -285,15 +297,15 @@ void SpineItem::SpineRenderer::render(QRhiCommandBuffer *cb)
     m_indexData.clear();
     m_frameGroups.clear();
 
-    spine::RenderCommand *cmd = m_renderCommands;
+    spine::RenderCommand* cmd = m_renderCommands;
     while (cmd) {
         if (cmd->numVertices == 0) { cmd = cmd->next; continue; }
 
-        QtTextureLoader::Texture *texKey = static_cast<QtTextureLoader::Texture*>(cmd->texture);
+        QtTextureLoader::Texture* texKey = static_cast<QtTextureLoader::Texture*>(cmd->texture);
         spine::BlendMode blend = cmd->blendMode;
 
         std::size_t groupVerts = 0, groupIndices = 0;
-        spine::RenderCommand *groupEnd = cmd;
+        spine::RenderCommand* groupEnd = cmd;
         while (groupEnd && groupEnd->texture == texKey && groupEnd->blendMode == blend) {
             groupVerts   += groupEnd->numVertices;
             groupIndices += groupEnd->numIndices;
@@ -308,7 +320,7 @@ void SpineItem::SpineRenderer::render(QRhiCommandBuffer *cb)
         fg.indexOffset  = m_indexData.size();
         fg.indexCount   = groupIndices;
 
-        for (spine::RenderCommand *c = cmd; c != groupEnd; c = c->next) {
+        for (spine::RenderCommand* c = cmd; c != groupEnd; c = c->next) {
             const std::size_t cmdVertexStart = m_vertexData.size();
 
             for (int32_t i = 0; i < c->numVertices; ++i) {
@@ -335,11 +347,11 @@ void SpineItem::SpineRenderer::render(QRhiCommandBuffer *cb)
 
     if (m_vertexData.empty()) return;
 
-    QRhiResourceUpdateBatch *rub = m_rhi->nextResourceUpdateBatch();
+    QRhiResourceUpdateBatch* rub = m_rhi->nextResourceUpdateBatch();
     if (!rub) [[unlikely]] { qWarning() << "Spine RHI: rub is null"; return; }
 
     // 纹理缺就补建：每帧扫一遍，缓存命中则跳过，成本 O(numCommands)
-    for (auto *c = m_renderCommands; c; c = c->next) {
+    for (auto* c = m_renderCommands; c; c = c->next) {
         if (c->numVertices > 0 && c->texture
             && m_textureCache.find(static_cast<QtTextureLoader::Texture*>(c->texture)) == m_textureCache.end())
             getOrCreateTexture(static_cast<QtTextureLoader::Texture*>(c->texture), rub);
@@ -392,7 +404,7 @@ void SpineItem::SpineRenderer::render(QRhiCommandBuffer *cb)
     cb->setViewport({ 0, 0, float(rtSize.width()), float(rtSize.height()) });
 
     for (const FrameGroup &fg : std::as_const(m_frameGroups)) {
-        QRhiGraphicsPipeline *pipeline = nullptr;
+        QRhiGraphicsPipeline* pipeline = nullptr;
         switch (fg.blendMode) {
         case spine::BlendMode_Normal: pipeline = m_pipelineNormal.get();   break;
         case spine::BlendMode_Additive: pipeline = m_pipelineAdditive.get(); break;
@@ -403,10 +415,10 @@ void SpineItem::SpineRenderer::render(QRhiCommandBuffer *cb)
         if (!pipeline) continue;
 
         auto it = m_textureCache.find(fg.texKey);
-        QRhiTexture *texture = (it != m_textureCache.end()) ? it->second.get() : nullptr;
+        QRhiTexture* texture = (it != m_textureCache.end()) ? it->second.get() : nullptr;
         if (!texture) continue;
 
-        QRhiShaderResourceBindings *srb = getOrCreateSrb(fg.texKey, texture);
+        QRhiShaderResourceBindings* srb = getOrCreateSrb(fg.texKey, texture);
         if (!srb) continue;
 
         cb->setGraphicsPipeline(pipeline);

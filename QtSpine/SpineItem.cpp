@@ -5,18 +5,7 @@
 #include <QIODevice>
 #include <QDebug>
 
-QByteArray SpineItem::readResource(const QString &path)
-{
-    QFile f(path);
-    if (!f.open(QIODevice::ReadOnly)) [[unlikely]] {
-        qWarning() << "Spine RHI: cannot open resource" << path;
-        //throw_error "Spine RHI: cannot open resource", path;
-        return {};
-    }
-    return f.readAll();
-}
-
-SpineItem::SpineItem(QQuickRhiItem *parent) : QQuickRhiItem(parent)
+SpineItem::SpineItem(QQuickRhiItem* parent) : QQuickRhiItem(parent)
 {
     setFlag(ItemHasContents, true);//允许自定义场景图内容
     setAlphaBlending(true);//背景透明
@@ -27,7 +16,7 @@ SpineItem::SpineItem(QQuickRhiItem *parent) : QQuickRhiItem(parent)
     times.start();
 }
 
-QUrl SpineItem::get_skeletonSource() const { return skeletonSource; }
+QUrl SpineItem::get_skeletonSource()const { return skeletonSource; }
 
 void SpineItem::set_skeletonSource(const QUrl &new_skeletonSource)
 {
@@ -37,7 +26,7 @@ void SpineItem::set_skeletonSource(const QUrl &new_skeletonSource)
     loadAssets();
 }
 
-QUrl SpineItem::get_atlasSource() const { return atlasSource; }
+QUrl SpineItem::get_atlasSource()const { return atlasSource; }
 
 void SpineItem::set_atlasSource(const QUrl &new_atlasSource)
 {
@@ -47,7 +36,7 @@ void SpineItem::set_atlasSource(const QUrl &new_atlasSource)
     loadAssets();
 }
 
-QString SpineItem::get_animationName() const { return animationName; }
+QString SpineItem::get_animationName()const { return animationName; }
 
 void SpineItem::set_animationName(const QString &new_animationName)
 {
@@ -67,6 +56,66 @@ void SpineItem::set_animationName(const QString &new_animationName)
     } else {
         animationState_ptr->clearTrack(0);
     }
+}
+
+qreal SpineItem::get_leftPadding()const { return leftPadding; }
+
+void SpineItem::set_leftPadding(qreal newLeftPadding)
+{
+    if (qFuzzyCompare(leftPadding, newLeftPadding))
+        return;
+    leftPadding = newLeftPadding;
+    emit leftPaddingChanged();
+}
+
+qreal SpineItem::get_topPadding()const { return topPadding; }
+
+void SpineItem::set_topPadding(qreal newTopPadding)
+{
+    if (qFuzzyCompare(topPadding, newTopPadding))
+        return;
+    topPadding = newTopPadding;
+    emit topPaddingChanged();
+}
+
+qreal SpineItem::get_rightPadding()const { return rightPadding; }
+
+void SpineItem::set_rightPadding(qreal newRightPadding)
+{
+    if (qFuzzyCompare(rightPadding, newRightPadding))
+        return;
+    rightPadding = newRightPadding;
+    emit rightPaddingChanged();
+}
+
+qreal SpineItem::get_bottomPadding()const { return bottomPadding; }
+
+void SpineItem::set_bottomPadding(qreal newBottomPadding)
+{
+    if (qFuzzyCompare(bottomPadding, newBottomPadding))
+        return;
+    bottomPadding = newBottomPadding;
+    emit bottomPaddingChanged();
+}
+
+qreal SpineItem::get_skeletonScale()const { return skeletonScale; }
+
+void SpineItem::set_skeletonScale(qreal newSkeletonScale)
+{
+    if (qFuzzyCompare(skeletonScale, newSkeletonScale))
+        return;
+    skeletonScale = newSkeletonScale;
+    emit skeletonScaleChanged();
+}
+
+qreal SpineItem::get_skeletonWidth()const
+{
+    return skeletonData_ptr->getWidth();
+}
+
+qreal SpineItem::get_skeletonHeight()const
+{
+    return skeletonData_ptr->getHeight();
 }
 
 void SpineItem::loadAssets()
@@ -138,8 +187,8 @@ void SpineItem::loadAssets()
         }
     }
 
-    setImplicitWidth(skeletonData_ptr->getWidth());
-    setImplicitHeight(skeletonData_ptr->getHeight());
+    setImplicitWidth(skeletonData_ptr->getWidth()*skeletonScale+leftPadding+rightPadding);
+    setImplicitHeight(skeletonData_ptr->getHeight()*skeletonScale+topPadding+bottomPadding);
 
     texturesNeedReset = true;
     time = times.elapsed();
@@ -167,7 +216,7 @@ void SpineItem::advance()
     update();
 }
 
-QQuickRhiItemRenderer *SpineItem::createRenderer()
+QQuickRhiItemRenderer* SpineItem::createRenderer()
 {
     return new SpineRenderer;
 }
