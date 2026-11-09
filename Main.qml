@@ -37,7 +37,7 @@ ApplicationWindow {
             x: -leftPadding
             y: -topPadding
             width: implicitWidth*skeletonScale+leftPadding+rightPadding
-            height: implicitHeight*skeletonScale+topPadding+bottomPadding/2
+            height: implicitHeight*skeletonScale+topPadding+bottomPadding
 
             skeletonSource: "qrc:/shaonv.json"
             atlasSource: "qrc:/shaonv.atlas"
