@@ -4,7 +4,7 @@
 
 ## 预览
 
-在线演示（WebAssembly 构建）：<https://CyanArc0.github.io/Columbula/>
+在线演示（WebAssembly 构建）：<https://CyanArc0.github.io/Columbina/>
 
 <table width="100%">
 <tr>
