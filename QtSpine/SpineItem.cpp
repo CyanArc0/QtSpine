@@ -189,6 +189,8 @@ void SpineItem::loadAssets()
 
     setImplicitWidth(skeletonData_ptr->getWidth()*skeletonScale+leftPadding+rightPadding);
     setImplicitHeight(skeletonData_ptr->getHeight()*skeletonScale+topPadding+bottomPadding);
+    emit skeletonWidthChanged();
+    emit skeletonHeightChanged();
 
     texturesNeedReset = true;
     time = times.elapsed();

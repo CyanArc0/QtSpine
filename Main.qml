@@ -26,8 +26,8 @@ ApplicationWindow {
     Item {
         x: (parent.width - width) / 2
         y: (parent.height - height) / 2
-        width: columbina.implicitWidth*columbina.skeletonScale
-        height: columbina.implicitHeight*columbina.skeletonScale
+        width: columbina.skeletonWidth*columbina.skeletonScale
+        height: columbina.skeletonHeight*columbina.skeletonScale
 
         scale: 0.6
 
@@ -36,8 +36,8 @@ ApplicationWindow {
 
             x: -leftPadding
             y: -topPadding
-            width: implicitWidth*skeletonScale+leftPadding+rightPadding
-            height: implicitHeight*skeletonScale+topPadding+bottomPadding
+            width: skeletonWidth*skeletonScale+leftPadding+rightPadding
+            height: skeletonHeight*skeletonScale+topPadding+bottomPadding
 
             skeletonSource: "qrc:/shaonv.json"
             atlasSource: "qrc:/shaonv.atlas"
