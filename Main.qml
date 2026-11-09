@@ -23,13 +23,14 @@ ApplicationWindow {
         fillMode: Image.PreserveAspectCrop
     }
 
+    property real itemScale: 0.6
     Item {
         x: (parent.width - width) / 2
         y: (parent.height - height) / 2
         width: columbina.skeletonWidth*columbina.skeletonScale
         height: columbina.skeletonHeight*columbina.skeletonScale
 
-        scale: 0.6
+        scale: itemScale
 
         SpineItem {
             id: columbina
@@ -55,7 +56,7 @@ ApplicationWindow {
                 anchors.fill: parent
                 color: transparent
                 border.color: red
-                border.width: 1 / parent.parent.scale
+                border.width: 1 / itemScale
             }
             //*/
         }
@@ -64,7 +65,7 @@ ApplicationWindow {
             anchors.fill: parent
             color: transparent
             border.color: blue
-            border.width: 1 / parent.scale
+            border.width: 1 / itemScale
         }
         //*/
         DragHandler { } // 拖拽处理

@@ -62,8 +62,7 @@ qreal SpineItem::get_leftPadding()const { return leftPadding; }
 
 void SpineItem::set_leftPadding(qreal newLeftPadding)
 {
-    if (qFuzzyCompare(leftPadding, newLeftPadding))
-        return;
+    if (qFuzzyCompare(leftPadding, newLeftPadding)) return;
     leftPadding = newLeftPadding;
     emit leftPaddingChanged();
 }
@@ -72,8 +71,7 @@ qreal SpineItem::get_topPadding()const { return topPadding; }
 
 void SpineItem::set_topPadding(qreal newTopPadding)
 {
-    if (qFuzzyCompare(topPadding, newTopPadding))
-        return;
+    if (qFuzzyCompare(topPadding, newTopPadding)) return;
     topPadding = newTopPadding;
     emit topPaddingChanged();
 }
@@ -82,8 +80,7 @@ qreal SpineItem::get_rightPadding()const { return rightPadding; }
 
 void SpineItem::set_rightPadding(qreal newRightPadding)
 {
-    if (qFuzzyCompare(rightPadding, newRightPadding))
-        return;
+    if (qFuzzyCompare(rightPadding, newRightPadding)) return;
     rightPadding = newRightPadding;
     emit rightPaddingChanged();
 }
@@ -92,8 +89,7 @@ qreal SpineItem::get_bottomPadding()const { return bottomPadding; }
 
 void SpineItem::set_bottomPadding(qreal newBottomPadding)
 {
-    if (qFuzzyCompare(bottomPadding, newBottomPadding))
-        return;
+    if (qFuzzyCompare(bottomPadding, newBottomPadding)) return;
     bottomPadding = newBottomPadding;
     emit bottomPaddingChanged();
 }
@@ -102,20 +98,26 @@ qreal SpineItem::get_skeletonScale()const { return skeletonScale; }
 
 void SpineItem::set_skeletonScale(qreal newSkeletonScale)
 {
-    if (qFuzzyCompare(skeletonScale, newSkeletonScale))
-        return;
+    if (qFuzzyCompare(skeletonScale, newSkeletonScale)) return;
     skeletonScale = newSkeletonScale;
     emit skeletonScaleChanged();
 }
 
 qreal SpineItem::get_skeletonWidth()const
 {
+    assert(skeletonData_ptr);
     return skeletonData_ptr->getWidth();
 }
 
 qreal SpineItem::get_skeletonHeight()const
 {
+    assert(skeletonData_ptr);
     return skeletonData_ptr->getHeight();
+}
+
+QQuickRhiItemRenderer* SpineItem::createRenderer()
+{
+    return new SpineRenderer;
 }
 
 void SpineItem::loadAssets()
@@ -216,9 +218,4 @@ void SpineItem::advance()
     skeleton_ptr->updateWorldTransform(spine::Physics_Update);
 
     update();
-}
-
-QQuickRhiItemRenderer* SpineItem::createRenderer()
-{
-    return new SpineRenderer;
 }

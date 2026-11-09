@@ -121,6 +121,8 @@ protected:
         std::vector<uint32_t> m_indexData;
         std::vector<FrameGroup> m_frameGroups;
     };
+
+protected:
     virtual QQuickRhiItemRenderer* createRenderer() override;
 
 private:
