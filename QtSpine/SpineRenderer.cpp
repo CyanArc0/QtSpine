@@ -9,13 +9,13 @@
 
 void SpineItem::SpineRenderer::initialize(QRhiCommandBuffer* cb)
 {
-    QRhi* currentRhi = this->rhi();
     // 如果 RHI 没变，且核心资源已在，直接返回。
-    if(m_rhi == currentRhi && m_sampler && m_ubo && m_dummySrb
+    if(QRhi* currentRhi = this->rhi();
+        m_rhi == currentRhi && m_sampler && m_ubo && m_dummySrb
         && m_pipelineNormal && m_pipelineAdditive && m_pipelineMultiply && m_pipelineScreen) {
         return;
     }
-    m_rhi = currentRhi;
+    else m_rhi = currentRhi;
 
     // ── 第 1 步：按"引用方 → 被引用方"顺序，拆掉上一次（可能重入）留下的资源 ──
     m_pipelineScreen.reset();
