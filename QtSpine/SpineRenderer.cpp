@@ -128,6 +128,8 @@ std::unique_ptr<QRhiGraphicsPipeline> SpineItem::SpineRenderer::createPipeline(s
     case spine::BlendMode_Multiply:
         blend.srcColor = QRhiGraphicsPipeline::DstColor;
         blend.dstColor = QRhiGraphicsPipeline::OneMinusSrcAlpha;
+        blend.srcAlpha = QRhiGraphicsPipeline::DstAlpha;
+        blend.dstAlpha = QRhiGraphicsPipeline::OneMinusSrcAlpha;
         break;
     case spine::BlendMode_Screen:
         blend.srcColor = QRhiGraphicsPipeline::One;
