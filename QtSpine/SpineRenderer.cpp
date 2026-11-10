@@ -1,6 +1,7 @@
 #include"SpineItem.h"
 #include<QMatrix4x4>
 #include<QResource>
+#include<QColor>
 #include<cstring>
 #include<utility>
 #include<algorithm>
@@ -165,7 +166,7 @@ QRhiTexture* SpineItem::SpineRenderer::getOrCreateTexture(QtTextureLoader::Textu
 
     // ✅ 直接拿已处理好的 QImage
     QImage* image = static_cast<QtTextureLoader::Texture*>(spineTexKey);
-    if(!image || image->isNull())[[unlikely]] {
+    if(image->isNull())[[unlikely]] {
         qWarning() << "Spine RHI: QImage is null";
         return nullptr;
     }
@@ -353,8 +354,8 @@ void SpineItem::SpineRenderer::render(QRhiCommandBuffer* cb)
         rub->updateDynamicBuffer(m_ubo.get(), 0, sizeof(ubuf), &ubuf);
     }
 
-    const uint32_t vbytes = m_vertexData.size() * sizeof(SpineVertex);
-    const uint32_t ibytes = m_indexData.size() * sizeof(uint32_t);
+    const std::size_t vbytes = m_vertexData.size() * sizeof(SpineVertex);
+    const std::size_t ibytes = m_indexData.size() * sizeof(uint32_t);
 
     if(!m_vbuf || m_vbuf->size() < vbytes) {
         m_vbuf.reset(m_rhi->newBuffer(QRhiBuffer::Dynamic, QRhiBuffer::VertexBuffer, vbytes));

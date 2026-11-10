@@ -112,13 +112,13 @@ void SpineItem::set_skeletonScale(qreal newSkeletonScale)
 
 qreal SpineItem::get_skeletonWidth()const
 {
-    assert(skeletonData_ptr);
+    if (!skeletonData_ptr) return 0;
     return skeletonData_ptr->getWidth();
 }
 
 qreal SpineItem::get_skeletonHeight()const
 {
-    assert(skeletonData_ptr);
+    if (!skeletonData_ptr) return 0;
     return skeletonData_ptr->getHeight();
 }
 
@@ -166,19 +166,19 @@ void SpineItem::loadAssets()
     if(skeletonSource.fileName().endsWith(".skel", Qt::CaseInsensitive)) {
         spine::SkeletonBinary binary(&attachmentLoader);
         skeletonData_ptr = std::unique_ptr<spine::SkeletonData>(binary.readSkeletonData(reinterpret_cast<const unsigned char*>(skeletonFileData.constData()), skeletonFileData.size()));
-        if(!skeletonData_ptr)[[unlikely]] {
-            qWarning() << "Spine: failed to read skeleton data from .skel";
-            atlas_ptr.reset();
-            return;
-        }
+
     } else {
         spine::SkeletonJson json(&attachmentLoader);
         skeletonData_ptr = std::unique_ptr<spine::SkeletonData>(json.readSkeletonData(skeletonFileData.constData()));
-        if(!skeletonData_ptr)[[unlikely]] {
-            qWarning() << "Spine: failed to read skeleton data from .json";
-            atlas_ptr.reset();
-            return;
-        }
+    }
+    if(!skeletonData_ptr)[[unlikely]] {
+        qWarning() << "Spine: failed to read skeleton data";
+        atlas_ptr.reset();
+        emit skeletonWidthChanged();
+        emit skeletonHeightChanged();
+        setImplicitWidth(skeletonData_ptr->getWidth()*skeletonScale+leftPadding+rightPadding);
+        setImplicitHeight(skeletonData_ptr->getHeight()*skeletonScale+topPadding+bottomPadding);
+        return;
     }
 
     // 创建 Skeleton 与 AnimationState

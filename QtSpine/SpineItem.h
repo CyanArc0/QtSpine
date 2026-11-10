@@ -5,6 +5,7 @@
 #include<QString>
 #include<QTimer>
 #include<QElapsedTimer>
+#include<QVector2D>
 #include<memory>
 #include<unordered_map>
 #include<vector>
