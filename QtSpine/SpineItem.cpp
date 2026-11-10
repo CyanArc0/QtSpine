@@ -24,7 +24,9 @@ void SpineItem::set_skeletonSource(const QUrl &new_skeletonSource)
     skeletonSource = new_skeletonSource;
     emit skeletonSourceChanged();
 
-    if(!skeletonSource.isEmpty() && !atlasSource.isEmpty()) loadAssets();
+    if(!skeletonSource.isEmpty() && !atlasSource.isEmpty())
+        loadAssets();
+    else clear();
 }
 
 QUrl SpineItem::get_atlasSource()const { return atlasSource; }
@@ -35,7 +37,9 @@ void SpineItem::set_atlasSource(const QUrl &new_atlasSource)
     atlasSource = new_atlasSource;
     emit atlasSourceChanged();
 
-    if(!skeletonSource.isEmpty() && !atlasSource.isEmpty()) loadAssets();
+    if(!skeletonSource.isEmpty() && !atlasSource.isEmpty())
+        loadAssets();
+    else clear();
 }
 
 QString SpineItem::get_animationName()const { return animationName; }
@@ -46,7 +50,8 @@ void SpineItem::set_animationName(const QString &new_animationName)
     animationName = new_animationName;
     emit animationNameChanged();
 
-    if(skeletonData_ptr && animationState_ptr) setAnimation();
+    if(skeletonData_ptr && animationState_ptr)
+        setAnimation();
 }
 
 qreal SpineItem::get_leftPadding()const { return leftPadding; }
@@ -112,19 +117,39 @@ void SpineItem::set_skeletonScale(qreal newSkeletonScale)
 
 qreal SpineItem::get_skeletonWidth()const
 {
-    if (!skeletonData_ptr) return 0;
+    if(!skeletonData_ptr) return 0;
     return skeletonData_ptr->getWidth();
 }
 
 qreal SpineItem::get_skeletonHeight()const
 {
-    if (!skeletonData_ptr) return 0;
+    if(!skeletonData_ptr) return 0;
     return skeletonData_ptr->getHeight();
 }
 
 QQuickRhiItemRenderer* SpineItem::createRenderer()
 {
     return new SpineRenderer;
+}
+
+void SpineItem::clear()
+{
+    // 还没有加载过任何东西：什么都不用做
+    if(!atlas_ptr && !skeletonData_ptr && !skeleton_ptr && !animationStateData_ptr && !animationState_ptr) return;
+
+    // 与 loadAssets 相同：按依赖倒序释放
+    animationState_ptr.reset();
+    animationStateData_ptr.reset();
+    skeleton_ptr.reset();
+    skeletonData_ptr.reset();
+    atlas_ptr.reset();
+
+    texturesNeedReset = true;   // 让渲染端丢掉纹理 / SRB 缓存
+    emit skeletonWidthChanged();
+    emit skeletonHeightChanged();
+    setImplicitWidth(leftPadding + rightPadding);
+    setImplicitHeight(topPadding + bottomPadding);
+    update();                   // 关键：请求重绘，render() 才能把上一帧清掉
 }
 
 void SpineItem::loadAssets()
@@ -166,18 +191,22 @@ void SpineItem::loadAssets()
     if(skeletonSource.fileName().endsWith(".skel", Qt::CaseInsensitive)) {
         spine::SkeletonBinary binary(&attachmentLoader);
         skeletonData_ptr = std::unique_ptr<spine::SkeletonData>(binary.readSkeletonData(reinterpret_cast<const unsigned char*>(skeletonFileData.constData()), skeletonFileData.size()));
-
     } else {
         spine::SkeletonJson json(&attachmentLoader);
         skeletonData_ptr = std::unique_ptr<spine::SkeletonData>(json.readSkeletonData(skeletonFileData.constData()));
     }
     if(!skeletonData_ptr)[[unlikely]] {
-        qWarning() << "Spine: failed to read skeleton data";
+        qWarning() << "Spine: failed to read skeleton data" << skeletonSource;
         atlas_ptr.reset();
+
+        // 旧资源已在上面释放，这里把状态收敛到"没有骨架"，并请求一次重绘，
+        // 让 render() 把离屏纹理清空，而不是停在上一次的画面上。
+        texturesNeedReset = true;
         emit skeletonWidthChanged();
         emit skeletonHeightChanged();
-        setImplicitWidth(skeletonData_ptr->getWidth()*skeletonScale+leftPadding+rightPadding);
-        setImplicitHeight(skeletonData_ptr->getHeight()*skeletonScale+topPadding+bottomPadding);
+        setImplicitWidth(leftPadding + rightPadding);
+        setImplicitHeight(topPadding + bottomPadding);
+        update();
         return;
     }
 

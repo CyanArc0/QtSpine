@@ -240,6 +240,10 @@ void SpineItem::SpineRenderer::synchronize(QQuickRhiItem* item)
 
     // ── 1. FBO 尺寸（投影矩阵用） ──
     m_projectionSize = {static_cast<float>(spineItem->width()), static_cast<float>(spineItem->height())};
+    if(m_projectionSize.x() <= 0 || m_projectionSize.y() <= 0) {
+        m_renderCommands = nullptr;
+        return;
+    }
 
     // ── 2. 内容区与锚点（padding 内缩后的中心） ──
     const float padL = static_cast<float>(spineItem->leftPadding);
@@ -272,11 +276,19 @@ void SpineItem::SpineRenderer::synchronize(QQuickRhiItem* item)
 
 void SpineItem::SpineRenderer::render(QRhiCommandBuffer* cb)
 {
-    if(!m_renderCommands) return;
-    if(!m_pipelineNormal || !m_sampler || !m_ubo) return;
-
     QRhiRenderTarget* rt = renderTarget();
     if(!rt)[[unlikely]] { qWarning() << "Spine RHI: renderTarget() is null"; return; }
+
+    const QColor clearColor = QColor::fromRgbF(0.0f, 0.0f, 0.0f, 0.0f);
+    const QRhiDepthStencilClearValue dsClear{ 1.0f, 0 };
+
+    // 离屏颜色纹理由本 item 独占，Qt 不会替我们清屏。
+    // 因此即使这一帧没有任何可画内容，也要进一次 pass 把上一帧擦掉，
+    // 否则骨架被卸载 / 加载失败后，画面会一直停在最后一帧。
+    const auto clearOnly = [cb, rt, clearColor, dsClear] {
+        cb->beginPass(rt, clearColor, dsClear);
+        cb->endPass();
+    };
 
     m_vertexData.clear();
     m_indexData.clear();
@@ -328,10 +340,14 @@ void SpineItem::SpineRenderer::render(QRhiCommandBuffer* cb)
         cmd = groupEnd;
     }
 
-    if(m_vertexData.empty()) return;
+    // 骨架已卸载、管线不可用或没有顶点：清屏后返回，不要留下上一帧的内容
+    if(!m_renderCommands || !m_pipelineNormal || !m_sampler || !m_ubo || m_vertexData.empty()) {
+        clearOnly();
+        return;
+    }
 
     QRhiResourceUpdateBatch* rub = m_rhi->nextResourceUpdateBatch();
-    if(!rub)[[unlikely]] { qWarning() << "Spine RHI: rub is null"; return; }
+    if(!rub)[[unlikely]] { qWarning() << "Spine RHI: rub is null"; clearOnly(); return; }
 
     // 纹理缺就补建：每帧扫一遍，缓存命中则跳过，成本 O(numCommands)
     for(auto* c = m_renderCommands; c; c = c->next) {
@@ -362,6 +378,8 @@ void SpineItem::SpineRenderer::render(QRhiCommandBuffer* cb)
         if(!m_vbuf || !m_vbuf->create())[[unlikely]] {
             qWarning() << "Spine RHI: vbuf create failed";
             m_vbuf.reset();
+            cb->resourceUpdate(rub); // rub 里已有纹理/UBO 更新，先提交再清屏，避免批次悬空
+            clearOnly();
             return;
         }
     }
@@ -370,6 +388,8 @@ void SpineItem::SpineRenderer::render(QRhiCommandBuffer* cb)
         if(!m_ibuf || !m_ibuf->create())[[unlikely]] {
             qWarning() << "Spine RHI: ibuf create failed";
             m_ibuf.reset();
+            cb->resourceUpdate(rub);
+            clearOnly();
             return;
         }
     }
@@ -379,8 +399,6 @@ void SpineItem::SpineRenderer::render(QRhiCommandBuffer* cb)
 
     cb->resourceUpdate(rub);
 
-    const QColor clearColor = QColor::fromRgbF(0.0f, 0.0f, 0.0f, 0.0f);
-    const QRhiDepthStencilClearValue dsClear{ 1.0f, 0 };
     cb->beginPass(rt, clearColor, dsClear);
 
     const QSize rtSize = rt->pixelSize();

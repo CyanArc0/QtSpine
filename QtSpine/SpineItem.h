@@ -76,9 +76,9 @@ protected:
     class SpineRenderer : public QQuickRhiItemRenderer
     {
     public:
-        virtual void initialize(QRhiCommandBuffer* cb) override;
-        virtual void synchronize(QQuickRhiItem* item) override;
-        virtual void render(QRhiCommandBuffer* cb) override;
+        virtual void initialize(QRhiCommandBuffer* cb)override;
+        virtual void synchronize(QQuickRhiItem* item)override;
+        virtual void render(QRhiCommandBuffer* cb)override;
 
     private:
         std::unique_ptr<QRhiGraphicsPipeline> createPipeline(spine::BlendMode blendMode);
@@ -124,9 +124,10 @@ protected:
     };
 
 protected:
-    virtual QQuickRhiItemRenderer* createRenderer() override;
+    virtual QQuickRhiItemRenderer* createRenderer()override;
 
 private:
+    void clear();
     void loadAssets();
     void setAnimation();
     void advance();
