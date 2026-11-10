@@ -1,10 +1,10 @@
 #pragma once
-#include <spine/TextureLoader.h>
-#include <spine/Atlas.h>
-#include <spine/SpineString.h>
-#include <QImage>
-#include <QString>
-#include <QDebug>
+#include<spine/TextureLoader.h>
+#include<spine/Atlas.h>
+#include<spine/SpineString.h>
+#include<QImage>
+#include<QString>
+#include"error_handling.hpp"
 
 class QtTextureLoader : public spine::TextureLoader
 {
@@ -16,14 +16,14 @@ public:
         // Load texture from path
         const QString filepath = QString::fromUtf8(path.buffer(), path.length());
         QImage image(filepath);
-        if (image.isNull()) {
+        if(image.isNull())[[unlikely]] {
             qWarning() << "Spine: failed to load texture" << filepath;
             page.texture = nullptr;
             return;
         }
 
         // ✅ 根据 AtlasPage::pma 决定是否预乘，仅在这里做一次
-        if (page.pma) {
+        if(page.pma) {
             // 源已预乘：只重排字节序（B,G,R,A → R,G,B,A），不执行预乘
             image = image.convertToFormat(QImage::Format_RGBA8888);
             // 然后只改格式标记，像素值一字节不改

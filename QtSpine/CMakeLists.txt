@@ -21,6 +21,7 @@ endif()
 qt_add_library(QtSpine STATIC
     QtTextureLoader.hpp
     getDefaultExtension.cpp
+    error_handling.hpp
 )
 add_library(QtSpine::QtSpine ALIAS QtSpine)
 

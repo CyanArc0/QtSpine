@@ -1,27 +1,16 @@
-#include "SpineItem.h"
-#include <QMatrix4x4>
-#include <QFile>
-#include <QDebug>
-#include <cstring>
-#include <utility>
-#include <algorithm>
+#include"SpineItem.h"
+#include<QMatrix4x4>
+#include<QResource>
+#include<cstring>
+#include<utility>
+#include<algorithm>
+#include"error_handling.hpp"
 
-namespace {
-    QByteArray readResource(const QString &path)
-    {
-        QFile f(path);
-        if (!f.open(QIODevice::ReadOnly)) [[unlikely]] {
-            qWarning() << "Spine RHI: cannot open resource" << path;
-            return {};
-        }
-        return f.readAll();
-    }
-}
 void SpineItem::SpineRenderer::initialize(QRhiCommandBuffer* cb)
 {
-    QRhi* currentRhi = rhi();
+    QRhi* currentRhi = this->rhi();
     // 如果 RHI 没变，且核心资源已在，直接返回。
-    if (m_rhi == currentRhi && m_sampler && m_ubo && m_dummySrb
+    if(m_rhi == currentRhi && m_sampler && m_ubo && m_dummySrb
         && m_pipelineNormal && m_pipelineAdditive && m_pipelineMultiply && m_pipelineScreen) {
         return;
     }
@@ -47,31 +36,29 @@ void SpineItem::SpineRenderer::initialize(QRhiCommandBuffer* cb)
     m_sampler.reset(m_rhi->newSampler(
         QRhiSampler::Linear, QRhiSampler::Linear, QRhiSampler::Linear,
         QRhiSampler::ClampToEdge, QRhiSampler::ClampToEdge, QRhiSampler::ClampToEdge));
-    if (!m_sampler || !m_sampler->create()) [[unlikely]] {
+    if(!m_sampler || !m_sampler->create())[[unlikely]] {
         qWarning() << "Spine RHI: failed to create sampler";
         m_sampler.reset();
         return;
     }
 
     m_ubo.reset(m_rhi->newBuffer(QRhiBuffer::Dynamic, QRhiBuffer::UniformBuffer, 80));
-    if (!m_ubo || !m_ubo->create()) [[unlikely]] {
+    if(!m_ubo || !m_ubo->create())[[unlikely]] {
         qWarning() << "Spine RHI: failed to create UBO";
         m_ubo.reset();
         return;
     }
 
     m_dummySrb.reset(m_rhi->newShaderResourceBindings());
-    if (!m_dummySrb) [[unlikely]] {
+    if(!m_dummySrb)[[unlikely]] {
         qWarning() << "Spine RHI: newShaderResourceBindings returned null";
         return;
     }
     m_dummySrb->setBindings({
-        QRhiShaderResourceBinding::uniformBuffer(
-            0, QRhiShaderResourceBinding::VertexStage | QRhiShaderResourceBinding::FragmentStage, m_ubo.get()),
-        QRhiShaderResourceBinding::sampledTexture(
-            1, QRhiShaderResourceBinding::FragmentStage, nullptr, nullptr)
+        QRhiShaderResourceBinding::uniformBuffer(0, QRhiShaderResourceBinding::VertexStage | QRhiShaderResourceBinding::FragmentStage, m_ubo.get()),
+        QRhiShaderResourceBinding::sampledTexture(1, QRhiShaderResourceBinding::FragmentStage, nullptr, nullptr)
     });
-    if (!m_dummySrb->create()) [[unlikely]] {
+    if(!m_dummySrb->create())[[unlikely]] {
         qWarning() << "Spine RHI: failed to create dummy SRB";
         m_dummySrb.reset();
         return;
@@ -82,7 +69,7 @@ void SpineItem::SpineRenderer::initialize(QRhiCommandBuffer* cb)
     m_pipelineMultiply = createPipeline(spine::BlendMode_Multiply);
     m_pipelineScreen   = createPipeline(spine::BlendMode_Screen);
 
-    if (!m_pipelineNormal || !m_pipelineAdditive || !m_pipelineMultiply || !m_pipelineScreen) [[unlikely]] {
+    if(!m_pipelineNormal || !m_pipelineAdditive || !m_pipelineMultiply || !m_pipelineScreen)[[unlikely]] {
         qWarning() << "Spine RHI: one or more pipelines failed to create";
     }
 }
@@ -90,18 +77,19 @@ void SpineItem::SpineRenderer::initialize(QRhiCommandBuffer* cb)
 // ─────────────────────────────────────────────────────────────
 // createPipeline：返回 unique_ptr，失败返回 nullptr
 // ─────────────────────────────────────────────────────────────
-
 std::unique_ptr<QRhiGraphicsPipeline> SpineItem::SpineRenderer::createPipeline(spine::BlendMode blendMode)
 {
-    QByteArray vsData = readResource(QStringLiteral(":/shaders/spine.vert.qsb"));
-    QByteArray fsData = readResource(QStringLiteral(":/shaders/spine.frag.qsb"));
-    if (vsData.isEmpty() || fsData.isEmpty()) [[unlikely]] {
+    const QResource vsResource(QStringLiteral(":/shaders/spine.vert.qsb"));
+    const QResource fsResource(QStringLiteral(":/shaders/spine.frag.qsb"));
+    const QByteArray vsData(reinterpret_cast<const char*>(vsResource.data()), vsResource.size());
+    const QByteArray fsData(reinterpret_cast<const char*>(fsResource.data()), fsResource.size());
+    if(vsData.isEmpty() || fsData.isEmpty())[[unlikely]] {
         qWarning() << "Spine RHI: shader resource empty";
         return nullptr;
     }
     QShader vs = QShader::fromSerialized(vsData);
     QShader fs = QShader::fromSerialized(fsData);
-    if (!vs.isValid() || !fs.isValid()) [[unlikely]] {
+    if(!vs.isValid() || !fs.isValid())[[unlikely]] {
         qWarning() << "Spine RHI: invalid shader data";
         return nullptr;
     }
@@ -109,9 +97,7 @@ std::unique_ptr<QRhiGraphicsPipeline> SpineItem::SpineRenderer::createPipeline(s
     auto pipeline = std::unique_ptr<QRhiGraphicsPipeline>(m_rhi->newGraphicsPipeline());
 
     QRhiVertexInputLayout layout;
-    layout.setBindings({
-        { sizeof(SpineVertex) }
-    });
+    layout.setBindings({QRhiVertexInputBinding{sizeof(SpineVertex)}});
     layout.setAttributes({
         { 0, 0, QRhiVertexInputAttribute::Float2,     offsetof(SpineVertex, x) },
         { 0, 1, QRhiVertexInputAttribute::Float2,     offsetof(SpineVertex, u) },
@@ -153,13 +139,13 @@ std::unique_ptr<QRhiGraphicsPipeline> SpineItem::SpineRenderer::createPipeline(s
     pipeline->setTopology(QRhiGraphicsPipeline::Triangles);
 
     QRhiRenderTarget* rt = renderTarget();
-    if (!rt) [[unlikely]] {
+    if(!rt)[[unlikely]] {
         qWarning() << "Spine RHI: renderTarget() is null, cannot create pipeline";
         return nullptr;
     }
     pipeline->setRenderPassDescriptor(rt->renderPassDescriptor());
 
-    if (!pipeline->create()) [[unlikely]] {
+    if(!pipeline->create())[[unlikely]] {
         qWarning() << "Spine RHI: pipeline create failed, blend =" << blendMode;
         return nullptr;
     }
@@ -172,25 +158,25 @@ std::unique_ptr<QRhiGraphicsPipeline> SpineItem::SpineRenderer::createPipeline(s
 
 QRhiTexture* SpineItem::SpineRenderer::getOrCreateTexture(QtTextureLoader::Texture* spineTexKey, QRhiResourceUpdateBatch* rub)
 {
-    if (!spineTexKey || !rub) return nullptr;
+    if(!spineTexKey || !rub) return nullptr;
 
     auto it = m_textureCache.find(spineTexKey);
-    if (it != m_textureCache.end()) return it->second.get();
+    if(it != m_textureCache.end()) return it->second.get();
 
     // ✅ 直接拿已处理好的 QImage
     QImage* image = static_cast<QtTextureLoader::Texture*>(spineTexKey);
-    if (!image || image->isNull()) [[unlikely]] {
+    if(!image || image->isNull())[[unlikely]] {
         qWarning() << "Spine RHI: QImage is null";
         return nullptr;
     }
 
     const QRhiTexture::Flags flags = QRhiTexture::UsedAsTransferSource | QRhiTexture::MipMapped | QRhiTexture::UsedWithGenerateMips;
     QRhiTexture* texture = m_rhi->newTexture(QRhiTexture::RGBA8, image->size(), 1, flags);
-    if (!texture) [[unlikely]] {
+    if(!texture)[[unlikely]] {
         qWarning() << "Spine RHI: newTexture returned null";
         return nullptr;
     }
-    if (!texture->create()) [[unlikely]] {
+    if(!texture->create())[[unlikely]] {
         qWarning() << "Spine RHI: texture->create() failed" << image->size();
         delete texture;
         return nullptr;
@@ -209,12 +195,12 @@ QRhiTexture* SpineItem::SpineRenderer::getOrCreateTexture(QtTextureLoader::Textu
 QRhiShaderResourceBindings* SpineItem::SpineRenderer::getOrCreateSrb(QtTextureLoader::Texture* texKey, QRhiTexture* texture)
 {
     auto it = m_srbCache.find(texKey);
-    if (it != m_srbCache.end()) {
+    if(it != m_srbCache.end()) {
         return it->second.get();
     }
 
     QRhiShaderResourceBindings* srb = m_rhi->newShaderResourceBindings();
-    if (!srb) [[unlikely]] {
+    if(!srb)[[unlikely]] {
         qWarning() << "Spine RHI: newShaderResourceBindings returned null";
         return nullptr;
     }
@@ -222,7 +208,7 @@ QRhiShaderResourceBindings* SpineItem::SpineRenderer::getOrCreateSrb(QtTextureLo
         QRhiShaderResourceBinding::uniformBuffer(0, QRhiShaderResourceBinding::VertexStage | QRhiShaderResourceBinding::FragmentStage, m_ubo.get()),
         QRhiShaderResourceBinding::sampledTexture(1, QRhiShaderResourceBinding::FragmentStage, texture, m_sampler.get())
     });
-    if (!srb->create()) [[unlikely]] {
+    if(!srb->create())[[unlikely]] {
         qWarning() << "Spine RHI: failed to create SRB";
         delete srb;
         return nullptr;
@@ -235,7 +221,7 @@ void SpineItem::SpineRenderer::synchronize(QQuickRhiItem* item)
 {
     SpineItem* spineItem = static_cast<SpineItem*>(item);
 
-    if (spineItem->texturesNeedReset) {
+    if(spineItem->texturesNeedReset) {
         // 只清缓存，不动 sampler/ubo/pipeline（它们不依赖纹理）
         m_srbCache.clear();
         m_textureCache.clear();
@@ -243,13 +229,13 @@ void SpineItem::SpineRenderer::synchronize(QQuickRhiItem* item)
     }
 
     // 骨架不存在 → 清空，render 直接早退
-    if (!spineItem || !spineItem->skeleton_ptr || !spineItem->skeletonData_ptr) {
+    if(!spineItem || !spineItem->skeleton_ptr || !spineItem->skeletonData_ptr) {
         m_renderCommands = nullptr;
         return;
     }
 
     m_renderCommands = spineItem->skeletonRenderer.render(*spineItem->skeleton_ptr);
-    if (!m_renderCommands) return;
+    if(!m_renderCommands) return;
 
     // ── 1. FBO 尺寸（投影矩阵用） ──
     m_projectionSize = {static_cast<float>(spineItem->width()), static_cast<float>(spineItem->height())};
@@ -285,28 +271,26 @@ void SpineItem::SpineRenderer::synchronize(QQuickRhiItem* item)
 
 void SpineItem::SpineRenderer::render(QRhiCommandBuffer* cb)
 {
-    if (!m_renderCommands) return;
-    if (!m_pipelineNormal || !m_sampler || !m_ubo) return;
+    if(!m_renderCommands) return;
+    if(!m_pipelineNormal || !m_sampler || !m_ubo) return;
 
     QRhiRenderTarget* rt = renderTarget();
-    if (!rt) [[unlikely]] { qWarning() << "Spine RHI: renderTarget() is null"; return; }
-
-    //const float
+    if(!rt)[[unlikely]] { qWarning() << "Spine RHI: renderTarget() is null"; return; }
 
     m_vertexData.clear();
     m_indexData.clear();
     m_frameGroups.clear();
 
     spine::RenderCommand* cmd = m_renderCommands;
-    while (cmd) {
-        if (cmd->numVertices == 0) { cmd = cmd->next; continue; }
+    while(cmd) {
+        if(cmd->numVertices == 0) { cmd = cmd->next; continue; }
 
         QtTextureLoader::Texture* texKey = static_cast<QtTextureLoader::Texture*>(cmd->texture);
         spine::BlendMode blend = cmd->blendMode;
 
         std::size_t groupVerts = 0, groupIndices = 0;
         spine::RenderCommand* groupEnd = cmd;
-        while (groupEnd && groupEnd->texture == texKey && groupEnd->blendMode == blend) {
+        while(groupEnd && groupEnd->texture == texKey && groupEnd->blendMode == blend) {
             groupVerts   += groupEnd->numVertices;
             groupIndices += groupEnd->numIndices;
             groupEnd = groupEnd->next;
@@ -320,13 +304,11 @@ void SpineItem::SpineRenderer::render(QRhiCommandBuffer* cb)
         fg.indexOffset  = m_indexData.size();
         fg.indexCount   = groupIndices;
 
-        for (spine::RenderCommand* c = cmd; c != groupEnd; c = c->next) {
+        for(spine::RenderCommand* c = cmd; c != groupEnd; c = c->next) {
             const std::size_t cmdVertexStart = m_vertexData.size();
 
-            for (int32_t i = 0; i < c->numVertices; ++i) {
+            for(int32_t i = 0; i < c->numVertices; ++i) {
                 SpineVertex v;
-                //v.x = offsetX + (c->positions[i * 2 + 0] - m_skelBounds.x()) * scaleX;
-                //v.y = offsetY - (c->positions[i * 2 + 1] - m_skelBounds.y()) * scaleY;
                 v.x = +c->positions[i * 2 + 0] * m_vertexScale + m_vertexTranslate.x();
                 v.y = -c->positions[i * 2 + 1] * m_vertexScale + m_vertexTranslate.y();
                 v.u = c->uvs[i * 2 + 0];
@@ -336,7 +318,7 @@ void SpineItem::SpineRenderer::render(QRhiCommandBuffer* cb)
                 m_vertexData.push_back(v);
             }
 
-            for (int32_t i = 0; i < c->numIndices; ++i) {
+            for(int32_t i = 0; i < c->numIndices; ++i) {
                 m_indexData.push_back(static_cast<uint32_t>(c->indices[i] + cmdVertexStart));
             }
         }
@@ -345,14 +327,14 @@ void SpineItem::SpineRenderer::render(QRhiCommandBuffer* cb)
         cmd = groupEnd;
     }
 
-    if (m_vertexData.empty()) return;
+    if(m_vertexData.empty()) return;
 
     QRhiResourceUpdateBatch* rub = m_rhi->nextResourceUpdateBatch();
-    if (!rub) [[unlikely]] { qWarning() << "Spine RHI: rub is null"; return; }
+    if(!rub)[[unlikely]] { qWarning() << "Spine RHI: rub is null"; return; }
 
     // 纹理缺就补建：每帧扫一遍，缓存命中则跳过，成本 O(numCommands)
-    for (auto* c = m_renderCommands; c; c = c->next) {
-        if (c->numVertices > 0 && c->texture
+    for(auto* c = m_renderCommands; c; c = c->next) {
+        if(c->numVertices > 0 && c->texture
             && m_textureCache.find(static_cast<QtTextureLoader::Texture*>(c->texture)) == m_textureCache.end())
             getOrCreateTexture(static_cast<QtTextureLoader::Texture*>(c->texture), rub);
     }
@@ -374,17 +356,17 @@ void SpineItem::SpineRenderer::render(QRhiCommandBuffer* cb)
     const uint32_t vbytes = m_vertexData.size() * sizeof(SpineVertex);
     const uint32_t ibytes = m_indexData.size() * sizeof(uint32_t);
 
-    if (!m_vbuf || m_vbuf->size() < vbytes) {
+    if(!m_vbuf || m_vbuf->size() < vbytes) {
         m_vbuf.reset(m_rhi->newBuffer(QRhiBuffer::Dynamic, QRhiBuffer::VertexBuffer, vbytes));
-        if (!m_vbuf || !m_vbuf->create()) [[unlikely]] {
+        if(!m_vbuf || !m_vbuf->create())[[unlikely]] {
             qWarning() << "Spine RHI: vbuf create failed";
             m_vbuf.reset();
             return;
         }
     }
-    if (!m_ibuf || m_ibuf->size() < ibytes) {
+    if(!m_ibuf || m_ibuf->size() < ibytes) {
         m_ibuf.reset(m_rhi->newBuffer(QRhiBuffer::Dynamic, QRhiBuffer::IndexBuffer, ibytes));
-        if (!m_ibuf || !m_ibuf->create()) [[unlikely]] {
+        if(!m_ibuf || !m_ibuf->create())[[unlikely]] {
             qWarning() << "Spine RHI: ibuf create failed";
             m_ibuf.reset();
             return;
@@ -403,7 +385,7 @@ void SpineItem::SpineRenderer::render(QRhiCommandBuffer* cb)
     const QSize rtSize = rt->pixelSize();
     cb->setViewport({ 0, 0, float(rtSize.width()), float(rtSize.height()) });
 
-    for (const FrameGroup &fg : std::as_const(m_frameGroups)) {
+    for(const FrameGroup &fg : std::as_const(m_frameGroups)) {
         QRhiGraphicsPipeline* pipeline = nullptr;
         switch (fg.blendMode) {
         case spine::BlendMode_Normal: pipeline = m_pipelineNormal.get();   break;
@@ -412,14 +394,14 @@ void SpineItem::SpineRenderer::render(QRhiCommandBuffer* cb)
         case spine::BlendMode_Screen: pipeline = m_pipelineScreen.get();   break;
         default: pipeline = m_pipelineNormal.get();  break;
         }
-        if (!pipeline) continue;
+        if(!pipeline) continue;
 
         auto it = m_textureCache.find(fg.texKey);
         QRhiTexture* texture = (it != m_textureCache.end()) ? it->second.get() : nullptr;
-        if (!texture) continue;
+        if(!texture) continue;
 
         QRhiShaderResourceBindings* srb = getOrCreateSrb(fg.texKey, texture);
-        if (!srb) continue;
+        if(!srb) continue;
 
         cb->setGraphicsPipeline(pipeline);
         cb->setShaderResources(srb);

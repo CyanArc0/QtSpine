@@ -1,19 +1,19 @@
 #pragma once
-#include <QQuickRhiItem>
-#include <QQuickRhiItemRenderer>
-#include <QUrl>
-#include <QString>
-#include <QTimer>
-#include <QElapsedTimer>
-#include <memory>
-#include <unordered_map>
-#include <vector>
-#include <cstddef>
-#include <cstdint>
-#include <rhi/qrhi.h>
-#include <spine/spine.h>
-#include "QtTextureLoader.hpp"
-#include "SpineVertex.h"
+#include<QQuickRhiItem>
+#include<QQuickRhiItemRenderer>
+#include<QUrl>
+#include<QString>
+#include<QTimer>
+#include<QElapsedTimer>
+#include<memory>
+#include<unordered_map>
+#include<vector>
+#include<cstddef>
+#include<cstdint>
+#include<rhi/qrhi.h>
+#include<spine/spine.h>
+#include"QtTextureLoader.hpp"
+#include"SpineVertex.h"
 
 class SpineItem : public QQuickRhiItem
 {
@@ -32,6 +32,20 @@ class SpineItem : public QQuickRhiItem
     Q_PROPERTY(qreal skeletonScale READ get_skeletonScale WRITE set_skeletonScale NOTIFY skeletonScaleChanged)
     Q_PROPERTY(qreal skeletonWidth READ get_skeletonWidth NOTIFY skeletonWidthChanged)
     Q_PROPERTY(qreal skeletonHeight READ get_skeletonHeight NOTIFY skeletonHeightChanged)
+
+signals:
+    void skeletonSourceChanged();
+    void atlasSourceChanged();
+    void animationNameChanged();
+
+    void leftPaddingChanged();
+    void topPaddingChanged();
+    void rightPaddingChanged();
+    void bottomPaddingChanged();
+
+    void skeletonScaleChanged();
+    void skeletonWidthChanged();
+    void skeletonHeightChanged();
 
 public:
     explicit SpineItem(QQuickRhiItem* parent = nullptr);
@@ -56,20 +70,6 @@ public:
     void set_skeletonScale(qreal newSkeletonScale);
     qreal get_skeletonWidth()const;
     qreal get_skeletonHeight()const;
-
-signals:
-    void skeletonSourceChanged();
-    void atlasSourceChanged();
-    void animationNameChanged();
-
-    void leftPaddingChanged();
-    void topPaddingChanged();
-    void rightPaddingChanged();
-    void bottomPaddingChanged();
-
-    void skeletonScaleChanged();
-    void skeletonWidthChanged();
-    void skeletonHeightChanged();
 
 protected:
     class SpineRenderer : public QQuickRhiItemRenderer
@@ -127,6 +127,7 @@ protected:
 
 private:
     void loadAssets();
+    void setAnimation();
     void advance();
 
 private:
