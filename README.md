@@ -147,11 +147,15 @@ Window {
         x: (parent.width - width) / 2
         y: (parent.height - height) / 2
 
-        // width/height 只决定渲染范围（boundingRect），不改变模型显示大小
-        width: implicitWidth * 1.0
-        height: implicitHeight * 1.0
-        
-        scale: 1.0 // scale 才是模型的实际显示缩放，以 item 中心为原点
+        // width/height 只决定渲染范围（离屏缓冲大小），一般直接跟随 implicitWidth/Height
+        width: implicitWidth
+        height: implicitHeight
+
+        // skeletonScale 是模型自身的缩放，会同时反映到 implicitWidth/Height
+        skeletonScale: 1.0
+
+        // QML 的 scale 只是对整个 item 做普通变换，不影响布局；两者可以叠加
+        scale: 1.0
 
         skeletonSource: "qrc:/shaonv.json"   // 也支持 .skel
         atlasSource: "qrc:/shaonv.atlas"
@@ -164,21 +168,47 @@ Window {
 
 ### 属性说明
 
-| 属性 | 类型 | 说明 |
-|---|---|---|
-| `skeletonSource` | `url` | Spine 骨骼文件，支持 `.json` 与 `.skel` |
-| `atlasSource` | `url` | Spine atlas 文件；纹理路径相对于该 atlas 所在目录解析 |
-| `animationName` | `string` | 要播放的动画名；为空时清空 track 0 |
+| 属性 | 类型 | 读写 | 默认值 | 说明 |
+|---|---|---|---|---|
+| `skeletonSource` | `url` | 读写 | `""` | Spine 骨骼文件，支持 `.json` 与 `.skel`；与 `atlasSource` 任一为空时卸载资源并清空画面 |
+| `atlasSource` | `url` | 读写 | `""` | Spine atlas 文件；纹理路径相对于该 atlas 所在目录解析；与 `skeletonSource` 任一为空时卸载 |
+| `animationName` | `string` | 读写 | `""` | 要播放的动画名，在 `track 0` 上循环；为空时清空 `track 0`（停止播放，保持当前姿态） |
+| `skeletonScale` | `qreal` | 读写 | `1.0` | 模型显示缩放；影响 `implicitWidth` / `implicitHeight` 和绘制大小，不影响 `skeletonWidth` / `skeletonHeight`。渲染时负值按 `0` 处理 |
+| `skeletonWidth` | `qreal` | 只读 | — | skeleton 资源的原始宽度，不含 `skeletonScale` 和 padding；资源加载/卸载时发出 `skeletonWidthChanged` |
+| `skeletonHeight` | `qreal` | 只读 | — | skeleton 资源的原始高度；资源加载/卸载时发出 `skeletonHeightChanged` |
+| `leftPadding` | `qreal` | 读写 | `0` | 左侧内边距，参与 `implicitWidth` 与内容区居中的计算 |
+| `topPadding` | `qreal` | 读写 | `0` | 上侧内边距，参与 `implicitHeight` 与内容区居中的计算 |
+| `rightPadding` | `qreal` | 读写 | `0` | 右侧内边距，参与 `implicitWidth` 与内容区居中的计算 |
+| `bottomPadding` | `qreal` | 读写 | `0` | 下侧内边距，参与 `implicitHeight` 与内容区居中的计算 |
+
+`implicitWidth` / `implicitHeight` 由上面的值算出，不需要手动赋值：
+
+```text
+implicitWidth  = skeletonWidth  * skeletonScale + leftPadding + rightPadding
+implicitHeight = skeletonHeight * skeletonScale + topPadding  + bottomPadding
+```
+
+四个 padding 同时定义了"内容区"：模型按 `skeletonScale` 缩放后，在 padding 内缩出来的矩形中居中绘制。
+
+### 继承自 QQuickRhiItem 的属性
+
+| 属性 | 说明 |
+|---|---|
+| `sampleCount` | MSAA 采样数，默认 `1`；变化时会重建渲染管线 |
+| `colorBufferFormat` | 离屏颜色缓冲格式（`RGBA8` / `RGBA16F` / `RGBA32F` / `RGB10A2`）；变化时会重建管线 |
+| `mirrorVertically` | 垂直翻转，默认 `false` |
+| `alphaBlending` | 预乘 Alpha 合成，`SpineItem` 构造时已置为 `true`，不建议关闭 |
 
 ### 行为说明
 
+- `width` / `height` 决定渲染范围（离屏缓冲大小），QML 的 `scale` 只是普通变换，两者互不影响。
 - 动画在 `track 0` 上循环播放，切换 `animationName` 会替换当前动画。
-- `implicitWidth` / `implicitHeight` 来自 skeleton 数据，可用于布局。
-- `width` / `height` 决定渲染范围；`scale` 决定模型显示大小。
+- 运行中修改 `skeletonSource` / `atlasSource` 会重新加载；把任一置空会卸载当前资源并让画面变空（不会停在上一帧）。
 - 纹理在加载时按 atlas 的 `pma` 标志统一转换为预乘 Alpha，渲染端全程按 PMA 处理。
 - Tint Black 的暗色数据来自 skeleton 资源，库不额外提供控制接口。
 - 支持 Normal / Additive / Multiply / Screen 四种混合模式，由 Spine 渲染命令自动选择。
 - 渲染基于 Qt RHI（`QQuickRhiItem`），后端由 Qt 选择（Vulkan / Metal / D3D11 / OpenGL）。
+- 只有设备、render pass 格式或采样数变化时才重建管线，纯尺寸变化不重建；顶点/索引缓冲按 2 倍容量增长复用，着色器只解析一次。
 
 ## 许可证与合规
 
