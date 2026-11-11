@@ -2,8 +2,6 @@
 
 基于 Qt6 的 QML Spine 运行时，在 Qt Quick 中原生渲染骨骼动画。
 
-渲染直接录制在 Qt Quick 自己的 render pass 里（`QSGRenderNode`），不经过离屏纹理，因此混合语义、缩放清晰度和 `opacity` 行为都与 spine 官方运行时一致。
-
 ## 预览
 
 在线演示（WebAssembly 构建）：<https://CyanArc0.github.io/Columbina/>
