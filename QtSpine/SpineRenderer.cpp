@@ -4,7 +4,6 @@
 #include<QMatrix4x4>
 #include<QResource>
 #include<algorithm>
-#include<atomic>
 #include<cstring>
 #include<cstddef>
 #include<cstdint>
@@ -213,19 +212,19 @@ std::unique_ptr<QRhiGraphicsPipeline> SpineItem::SpineRenderer::createPipeline(s
     case spine::BlendMode_Additive:
         blend.srcColor = QRhiGraphicsPipeline::One;
         blend.dstColor = QRhiGraphicsPipeline::One;
-        blend.srcAlpha = QRhiGraphicsPipeline::Zero;
+        blend.srcAlpha = QRhiGraphicsPipeline::One;
         blend.dstAlpha = QRhiGraphicsPipeline::One;
         break;
     case spine::BlendMode_Multiply:
         blend.srcColor = QRhiGraphicsPipeline::DstColor;
         blend.dstColor = QRhiGraphicsPipeline::OneMinusSrcAlpha;
-        blend.srcAlpha = QRhiGraphicsPipeline::OneMinusSrcAlpha;   // 对齐 GLFW/TS
+        blend.srcAlpha = QRhiGraphicsPipeline::DstColor;
         blend.dstAlpha = QRhiGraphicsPipeline::OneMinusSrcAlpha;
         break;
     case spine::BlendMode_Screen:
         blend.srcColor = QRhiGraphicsPipeline::One;
         blend.dstColor = QRhiGraphicsPipeline::OneMinusSrcColor;
-        blend.srcAlpha = QRhiGraphicsPipeline::OneMinusSrcColor;   // 对齐 GLFW/TS
+        blend.srcAlpha = QRhiGraphicsPipeline::One;
         blend.dstAlpha = QRhiGraphicsPipeline::OneMinusSrcColor;
         break;
     default:
