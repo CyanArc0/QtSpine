@@ -35,10 +35,8 @@ ApplicationWindow {
         SpineItem {
             id: columbina
 
-            x: -leftPadding
-            y: -topPadding
-            //width: skeletonWidth*skeletonScale+leftPadding+rightPadding
-            //height: skeletonHeight*skeletonScale+topPadding+bottomPadding
+            // 内容居中于 item，item 与包裹层的尺寸一致
+            anchors.fill: parent
 
             skeletonSource: "qrc:/shaonv.json"
             atlasSource: "qrc:/shaonv.atlas"
@@ -46,10 +44,7 @@ ApplicationWindow {
 
             skeletonScale: 1.0
 
-            leftPadding: 103.52 + 50
-            rightPadding: 84.37
-            topPadding: 28.247
-            bottomPadding: 38.203
+            //clip: true
 
             ///*
             Rectangle { // 边框

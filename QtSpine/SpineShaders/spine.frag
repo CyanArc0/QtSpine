@@ -6,7 +6,7 @@ layout(location = 2) in vec4 vDarkColor;  // 未预乘的 dark tint（只用 rgb
 
 layout(location = 0) out vec4 fragColor;
 
-// 与 SpineRenderer.cpp 中 sampledTexture(1, ...) 对应
+// 与 SpineNode.cpp 中 sampledTexture(1, ...) 对应
 layout(binding = 1) uniform sampler2D tex;
 
 void main() {

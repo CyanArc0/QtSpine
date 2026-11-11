@@ -1,6 +1,6 @@
 #version 440
 
-// 顶点布局必须与 SpineRenderer.cpp 中的 QRhiVertexInputLayout 一致：
+// 顶点布局必须与 SpineNode.cpp 中的 QRhiVertexInputLayout 一致：
 //   0: aPos        Float2       offset  0
 //   1: aUV         Float2       offset  8
 //   2: aColor      UNormByte4   offset 16
