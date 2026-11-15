@@ -25,14 +25,19 @@ qt_add_library(QtSpine STATIC
 )
 add_library(QtSpine::QtSpine ALIAS QtSpine)
 
+target_compile_features(QtSpine PUBLIC cxx_std_20)
+
 qt_add_qml_module(QtSpine
     URI QtSpine
     VERSION 2.0
     SOURCES
         SpineItem.h
         SpineItem.cpp
+        SpineNode.h
         SpineNode.cpp
         SpineVertex.h
+        SpineUniforms.h
+        SpineShader.hpp
 )
 
 # 编译着色器为 .qsb
@@ -49,6 +54,7 @@ target_include_directories(QtSpine PUBLIC
 )
 
 target_link_libraries(QtSpine
-    PUBLIC Qt6::Quick Qt6::Gui Qt6::GuiPrivate    # QRhi 在 Qt::GuiPrivate 中
+    PUBLIC Qt6::Quick Qt6::Gui
+    PRIVATE Qt6::GuiPrivate    # QRhi 在 Qt::GuiPrivate 中
     PUBLIC spine-cpp
 )

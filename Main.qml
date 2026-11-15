@@ -22,47 +22,37 @@ ApplicationWindow {
         source: "p7_bg_gd.png"
         fillMode: Image.PreserveAspectCrop
     }
+    SpineItem {
+        id: columbina
 
-    property real itemScale: 0.6
-    Item {
         x: (parent.width - width) / 2
         y: (parent.height - height) / 2
-        width: columbina.skeletonWidth*columbina.skeletonScale
-        height: columbina.skeletonHeight*columbina.skeletonScale
+        //width: columbina.skeletonWidth*columbina.skeletonScale
+        //height: columbina.skeletonHeight*columbina.skeletonScale
 
-        scale: itemScale
+        skeletonSource: "qrc:/shaonv.json"
+        atlasSource: "qrc:/shaonv.atlas"
 
-        SpineItem {
-            id: columbina
-
-            // 内容居中于 item，item 与包裹层的尺寸一致
-            anchors.fill: parent
-
-            skeletonSource: "qrc:/shaonv.json"
-            atlasSource: "qrc:/shaonv.atlas"
-            animationName: "a2b2a"
-
-            skeletonScale: 1.0
-
-            //clip: true
-
-            ///*
-            Rectangle { // 边框
-                anchors.fill: parent
-                color: transparent
-                border.color: red
-                border.width: 1 / itemScale
-            }
-            //*/
+        Component.onCompleted: {
+            playAnimation("a2b2a")
         }
-        ///*
+
+        scale: 0.6
+        //clip: true
+
         Rectangle { // 边框
-            anchors.fill: parent
+            //anchors.fill: parent
+            x: columbina.contentRect.x
+            y: columbina.contentRect.y
+            width: columbina.contentRect.width
+            height: columbina.contentRect.height
             color: transparent
             border.color: blue
-            border.width: 1 / itemScale
+            border.width: 1 / parent.scale
+
+            DragHandler { // 拖拽处理
+                target: columbina
+            }
         }
-        //*/
-        DragHandler { } // 拖拽处理
     }
 }

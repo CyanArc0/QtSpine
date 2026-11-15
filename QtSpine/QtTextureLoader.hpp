@@ -13,11 +13,12 @@ public:
 
     virtual void load(spine::AtlasPage& page, const spine::String& path)override
     {
+        using namespace Qt::StringLiterals;
         // Load texture from path
         const QString filepath = QString::fromUtf8(path.buffer(), path.length());
         QImage image(filepath);
         if(image.isNull())[[unlikely]] {
-            qWarning() << "Spine: failed to load texture" << filepath;
+            error_handling::warn(u"Spine: failed to load texture "_s + filepath);
             page.texture = nullptr;
             return;
         }
