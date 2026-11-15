@@ -27,12 +27,12 @@ Android
 |---|---|---|
 | Qt | **6.8+** | 设计基线；已验证 6.12.0 |
 | Spine Runtimes (spine-cpp) | **4.2** | 当前适配版本 |
-| C++ | **C++20 及以上** | 最低已验证 C++17 |
+| C++ | **C++20 及以上** | 库源码使用 `std::span`、`std::ranges` 与指定初始化器 |
 | CMake | **3.18+** | `FetchContent_Declare` 的 `SOURCE_SUBDIR` 自 3.18 引入 |
 
 > **关于 Qt 版本**：渲染基于 `QSGRenderNode`，其中 `renderTarget()` / `commandBuffer()` / `QRhiRenderPassDescriptor::serializedFormat()` 等接口自 Qt 6.6 起提供，因此理论最低版本为 6.6，但只在 6.8+ 上验证过。
 
-> **关于 C++17**：`[[unlikely]]` 是 C++20 属性。C++17 标准规定，实现未识别的属性应被忽略（[dcl.attr.grammar]/6），因此不会因其产生编译错误；实现可以给出属性警告。
+> **关于 C++ 标准**：`QtSpine/CMakeLists.txt` 已通过 `target_compile_features(QtSpine PUBLIC cxx_std_20)` 声明 C++20，链接 `QtSpine` 的工程会自动继承，不需要在宿主工程里重复设置。
 
 ## 通过 CMake 引入
 
@@ -148,15 +148,22 @@ Window {
 
         skeletonSource: "qrc:/shaonv.json"   // 也支持 .skel
         atlasSource: "qrc:/shaonv.atlas"
-        animationName: "a2b2a"
 
-        skeletonScale: 1.0
-        scale: 1.0            // QML 的 scale 只是普通变换，不影响布局
+        // 资源在 URL 赋值时同步加载，加载完成后即可播放
+        Component.onCompleted: playAnimation("a2b2a")
 
-        DragHandler { }       // 拖拽处理程序
+        scale: 0.6   // 普通 QML 变换，不影响布局和 contentRect
     }
 }
 ```
+
+### 尺寸与布局
+
+不设置 `width` / `height` 时，`SpineItem` 的尺寸跟随 `implicitWidth` / `implicitHeight`；资源加载后两者分别等于 `skeletonWidth` / `skeletonHeight`。骨架按资源里的 setup 包围盒居中于 item。
+
+`scale`、`rotation` 等是普通 QML 变换，只改变绘制结果，不影响 `width` / `height` / `skeletonWidth` / `skeletonHeight`，也不影响 `contentRect` 的局部坐标。需要外边距时用外层 `Item` 或显式 `width`/`height`。
+
+渲染不经过离屏纹理，**内容超出 item 矩形不会被裁掉**，只有自身或祖先的 `clip` 才裁剪。
 
 ### 属性说明
 
@@ -164,65 +171,58 @@ Window {
 |---|---|---|---|---|
 | `skeletonSource` | `url` | 读写 | `""` | Spine 骨骼文件，支持 `.json` 与 `.skel`；与 `atlasSource` 任一为空时卸载资源并清空画面 |
 | `atlasSource` | `url` | 读写 | `""` | Spine atlas 文件；纹理路径相对于该 atlas 所在目录解析；与 `skeletonSource` 任一为空时卸载 |
-| `animationName` | `string` | 读写 | `""` | 在 `track 0` 上播放的动画名，循环与否由 `loop` 决定；为空时清空 `track 0`（停止播放，保持当前姿态） |
-| `paused` | `bool` | 读写 | `false` | 暂停后不再推进动画，也不请求重绘；恢复时不会把暂停时长计入 delta |
-| `timeScale` | `qreal` | 读写 | `1.0` | 播放速度倍率，作用在 `AnimationState` 上 |
-| `loop` | `bool` | 读写 | `true` | `animationName` / `playAnimation(name)` 的循环开关；修改时立即作用到 `track 0` 当前动画 |
-| `mixDuration` | `qreal` | 读写 | `0.0` | 切换动画时的混入时长（秒），`0` 为直接切换。只影响之后的切换，已在进行的混合不受影响 |
-| `skin` | `string` | 读写 | `""` | 皮肤名；空串为默认皮肤。资源加载前设置会在加载后自动套用，找不到时告警并保持默认 |
-| `skinNames` | `list<string>` | 只读 | — | 资源里的皮肤名列表；加载/卸载时发 `skinNamesChanged` |
-| `animationNames` | `list<string>` | 只读 | — | 资源里的动画名列表；加载/卸载时发 `animationNamesChanged` |
-| `skeletonColor` | `color` | 读写 | `white` | 整体着色，等价于 `Skeleton::setColor`（会乘进顶点色） |
-| `contentRect` | `rect` | 只读 | — | 当前姿态在 **item 局部坐标**里的包围盒；每帧推进后发 `contentRectChanged` |
-| `currentTime` | `qreal` | 读写 | `0` | `track 0` 的播放时间（秒）；写入即 seek 并立刻应用一帧姿态（暂停时也生效） |
-| `skeletonScale` | `qreal` | 读写 | `1.0` | 模型显示缩放；影响 `implicitWidth` / `implicitHeight` 和绘制大小，不影响 `skeletonWidth` / `skeletonHeight`。负值按 `0` 处理 |
-| `skeletonWidth` | `qreal` | 只读 | — | skeleton 资源的原始宽度，不含 `skeletonScale` |
-| `skeletonHeight` | `qreal` | 只读 | — | skeleton 资源的原始高度 |
+| `skeletonWidth` | `qreal` | 只读 | `0` | skeleton 资源的原始宽度；未加载时为 0 |
+| `skeletonHeight` | `qreal` | 只读 | `0` | skeleton 资源的原始高度；未加载时为 0 |
+| `animationNames` | `list<string>` | 只读 | `[]` | 资源里的动画名列表；加载/卸载时更新 |
+| `contentRect` | `rect` | 只读 | 空矩形 | 当前姿态在 **item 局部坐标**里的包围盒；每帧推进后更新；没有可见内容时为空矩形 |
 
-`implicitWidth` / `implicitHeight` 由资源尺寸算出，不需要手动赋值：
+`implicitWidth` / `implicitHeight` 由资源尺寸算出：
 
 ```text
-implicitWidth  = skeletonWidth  * skeletonScale
-implicitHeight = skeletonHeight * skeletonScale
+implicitWidth  = skeletonWidth
+implicitHeight = skeletonHeight
 ```
 
-模型按 `skeletonScale` 缩放后**居中于 item**；需要外边距时用外层 `Item` 或显式 `width`/`height` 表达。渲染不经过离屏纹理，**内容超出 item 矩形不会被裁掉**，只有自身或祖先的 `clip` 才裁剪。
-
-### 方法与信号
+### 方法
 
 | 名字 | 说明 |
 |---|---|
-| `play()` / `pause()` | 等价于 `paused = false / true` |
-| `playAnimation(name)` | 在 `track 0` 上播放，`loop` 取属性值 |
-| `playAnimation(name, track, loop)` | 在指定轨道播放；找不到同名动画时只告警，不影响当前播放 |
-| `addAnimation(name, delay, loop)` | 在 `track 0` 当前动画之后排队，`delay` 秒后开始（单位秒） |
-| `finished(track)` | 非循环动画播放完毕。spine 对循环动画每完成一圈也会发 `complete`，这里已过滤 |
-| `eventFired(name, intValue, floatValue, stringValue)` | spine 事件时间轴上的事件（脚步、攻击判定等） |
-| `errorOccurred(message)` | 所有可恢复错误：加载/解析失败、找不到动画名、找不到皮肤名。`message` 是可直接展示给人看的文案（含出错对象和候选列表），QML 用它决定弹窗还是记日志。同一条错误只上报一次；信号延迟到下一轮事件循环发出，所以声明式的 `onErrorOccurred` 也能收到 |
+| `playAnimation(name)` | 在 `track 0` 上播放指定动画，始终循环。资源未就绪或找不到同名动画时返回 `false`；找不到时日志会列出可用动画名 |
 
-`finished` / `eventFired` 是在 `advance()` 内部（GUI 线程）发出的，可以直接在处理器里切换动画：
+`playAnimation` 是 `Q_INVOKABLE`，可以直接在 `Component.onCompleted` 或输入处理器里调用：
 
 ```qml
 SpineItem {
     id: spine
     skeletonSource: "qrc:/hero.json"
     atlasSource: "qrc:/hero.atlas"
-    mixDuration: 0.2
 
-    onFinished: (track) => spine.playAnimation("idle", 0, true)
-    onEventFired: (name, intValue, floatValue, stringValue) => console.log(name, intValue)
-    onErrorOccurred: (message) => console.warn("spine:", message)   // 也可以弹窗
+    Component.onCompleted: playAnimation("idle")
+
+    TapHandler {
+        onTapped: spine.playAnimation("attack")
+    }
 }
 ```
 
+### 信号
+
+| 名字 | 说明 |
+|---|---|
+| `skeletonSourceChanged` / `atlasSourceChanged` | 两个资源 URL 变化时发出 |
+| `skeletonWidthChanged` / `skeletonHeightChanged` | 资源加载/卸载后发出 |
+| `animationNamesChanged` | 资源加载/卸载后发出 |
+| `contentRectChanged` | 每帧推进后发出；绑定在 `contentRect` 上的 QML 会重新求值 |
+
 ### 行为说明
 
-- 动画由 60 Hz 定时器推进，单帧 delta 上限 `1/30` 秒（掉帧时动画会变慢而不是跳帧）。
-- `skeletonSource` / `atlasSource` 任一置空都会卸载资源，画面立即变空，不会停在上一帧。
-- 纹理按 atlas 的 `pma` 标志统一转成预乘 Alpha，渲染端全程按 PMA 处理。
-- 支持 Normal / Additive / Multiply / Screen 四种混合模式，混合因子对齐 spine 官方 GL/WebGL 实现，且混合目标就是场景里真实的背景。
+- 动画由 60 Hz 定时器推进，单帧 delta 上限 `1/30` 秒（掉帧时动画会变慢而不是跳帧）；当前没有暂停接口，有资源时定时器会持续每帧更新。
+- `skeletonSource` / `atlasSource` 都非空时，任一 URL 变化都会在 GUI 线程同步读取并解析资源；任一置空会立即卸载资源并停止绘制，不会停在上一帧。
+- 资源打不开、骨骼解析失败、动画名不存在等错误通过 `qWarning` 输出，不会抛出到 QML；`playAnimation` 失败返回 `false`。
+- 纹理按 atlas 的 `pma` 标志统一转成预乘 Alpha，渲染端全程按 PMA 处理；采样器固定为 `Linear` + mipmap + `ClampToEdge`。
+- 支持 Normal / Additive / Multiply / Screen 四种混合模式；绘制直接发生在 Qt Quick 当前 render pass 中，混合目标是场景里真实的背景，而不是离屏纹理。
 - `opacity` 通过场景图的 `inheritedOpacity()` 乘进顶点色；`clip` 通过 scissor 生效。
-- 只有设备、render pass 格式或采样数变化时才重建管线；纯尺寸变化不重建；着色器只解析一次。
+- pipeline 会跟随 QRhi 设备和 render target 环境按需重建，着色器只解析一次。
 - 顶点/索引缓冲按 2 倍容量增长复用，裁剪动画逐帧改变顶点数时不会反复重建。
 
 ### 已知限制
@@ -230,7 +230,8 @@ SpineItem {
 - **不要在 `SpineItem` 或它的祖先上开 `layer.enabled` / `ShaderEffect`**：一旦被 Qt 渲染进 FBO，就又变成离屏合成，Additive / Multiply / Screen 会退化。这是离屏合成本身的限制，与 QtSpine 无关。
 - atlas 里的 `filter` / `repeat` 字段目前被忽略：采样器统一为 `Linear` + mipmap + `ClampToEdge`（与 spine 官方 GL 示例一致）。像素画资源若出现模糊，请在导出时放大 atlas。
 - Tint Black 的暗色项不做顶点 alpha 预乘（与 spine-cpp 官方 GL 示例一致；spine-ts 会乘）。
-- 动画时间轴目前只暴露 `track 0` 的读写（`currentTime`、`animationName`），其它轨道只能通过 `playAnimation(name, track, loop)` 播放。
+- 当前对外接口只覆盖基础播放：只有 `track 0`、始终循环，没有暂停/seek/变速/皮肤/整体着色/播放完成或事件回调。旧版的 `animationName`、`paused`、`timeScale`、`loop`、`mixDuration`、`skin`、`skinNames`、`skeletonColor`、`currentTime`、`skeletonScale` 属性，以及 `play()` / `pause()`、`playAnimation(name, track, loop)`、`addAnimation()`、`reload()`、`finished`、`eventFired`、`errorOccurred` 均已移除；缩放请用 QML 的 `scale`。
+- `contentRect` 每帧都会重新计算并发信号。QML 里多个绑定分别读取 `contentRect.x/y/width/height` 时，每帧会多次调用 `getBounds()`；大量 `SpineItem` 场景下建议只绑定整体矩形或自行缓存。
 
 ## 许可证与合规
 
