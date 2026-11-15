@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
 import QtQuick.Controls.Basic
+import QtMultimedia
 import QtSpine
 
 ApplicationWindow {
@@ -11,7 +12,7 @@ ApplicationWindow {
     minimumWidth: 640
     minimumHeight: 720
     visible: true
-    title: qsTr("QtSpineExample")
+    title: qsTr("Columbina")
     property color transparent: "transparent"
     property color dodgerblue: "dodgerblue"
     property color blue: "blue"
@@ -19,7 +20,7 @@ ApplicationWindow {
 
     Image { // 背景
         anchors.fill: parent
-        source: "p7_bg_gd.png"
+        source: "resources/p7_bg_gd.png"
         fillMode: Image.PreserveAspectCrop
     }
     SpineItem {
@@ -34,12 +35,12 @@ ApplicationWindow {
         atlasSource: "qrc:/shaonv.atlas"
 
         Component.onCompleted: {
-            playAnimation("a2b2a")
+            playAnimation("a")
         }
 
-        scale: 0.6
+        scale: (Math.sqrt(5) - 1) / 2
         //clip: true
-
+        /*
         Rectangle { // 边框
             //anchors.fill: parent
             x: columbina.contentRect.x
@@ -50,9 +51,16 @@ ApplicationWindow {
             border.color: blue
             border.width: 1 / parent.scale
 
-            DragHandler { // 拖拽处理
-                target: columbina
-            }
         }
+        */
+        DragHandler { // 拖拽处理
+            target: columbina
+        }
+    }
+    MediaPlayer { // 背景音乐
+        source: "resources/Somnias a Luna.flac"
+        audioOutput: AudioOutput {}
+        loops: MediaPlayer.Infinite
+        autoPlay: true
     }
 }

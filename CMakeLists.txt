@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-find_package(Qt6 REQUIRED COMPONENTS Quick)
+find_package(Qt6 REQUIRED COMPONENTS Quick Multimedia)
 
 include(FetchContent)
 FetchContent_Declare(
@@ -33,16 +33,17 @@ qt_add_qml_module(QtSpineExample
     QML_FILES
         Main.qml
     RESOURCES
-        p7_bg_gd.png
+        "resources/p7_bg_gd.png"
+        "resources/Somnias a Luna.flac"
 )
 
 qt_add_resources(QtSpineExample "spine_resources"
     PREFIX "/"
-    BASE "shaonv"
+    BASE "resources/shaonv"
     FILES
-        shaonv/shaonv.json
-        shaonv/shaonv.atlas
-        shaonv/shaonv.png
+        "resources/shaonv/shaonv.json"
+        "resources/shaonv/shaonv.atlas"
+        "resources/shaonv/shaonv.png"
 )
 
 set_target_properties(QtSpineExample PROPERTIES
@@ -53,7 +54,7 @@ set_target_properties(QtSpineExample PROPERTIES
 )
 
 target_link_libraries(QtSpineExample
-    PRIVATE Qt6::Quick
+    PRIVATE Qt6::Quick Qt6::Multimedia
     PRIVATE QtSpine
 )
 
