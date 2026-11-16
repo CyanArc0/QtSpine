@@ -14,8 +14,6 @@ ApplicationWindow {
     title: qsTr("Columbina")
     property color transparent: "transparent"
     property color dodgerblue: "dodgerblue"
-    property color blue: "blue"
-    property color red: "red"
 
     Image { // 背景
         anchors.fill: parent
@@ -27,8 +25,8 @@ ApplicationWindow {
 
         x: (parent.width - width) / 2
         y: (parent.height - height) / 2
-        //width: columbina.skeletonWidth*columbina.skeletonScale
-        //height: columbina.skeletonHeight*columbina.skeletonScale
+        //width: columbina.skeletonWidth
+        //height: columbina.skeletonHeight
 
         skeletonSource: "qrc:/shaonv.json"
         atlasSource: "qrc:/shaonv.atlas"
@@ -38,7 +36,7 @@ ApplicationWindow {
         }
 
         scale: (Math.sqrt(5) - 1) / 2
-        //clip: true
+
         /*
         Rectangle { // 边框
             //anchors.fill: parent
@@ -47,9 +45,8 @@ ApplicationWindow {
             width: columbina.contentRect.width
             height: columbina.contentRect.height
             color: transparent
-            border.color: blue
+            border.color: dodgerblue
             border.width: 1 / parent.scale
-
         }
         */
         DragHandler { // 拖拽处理
