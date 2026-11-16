@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-find_package(Qt6 REQUIRED COMPONENTS Quick Multimedia)
+find_package(Qt6 REQUIRED COMPONENTS Quick)
 
 include(FetchContent)
 FetchContent_Declare(
@@ -34,7 +34,6 @@ qt_add_qml_module(QtSpineExample
         Main.qml
     RESOURCES
         "resources/p7_bg_gd.png"
-        "resources/Somnias a Luna.flac"
 )
 
 qt_add_resources(QtSpineExample "spine_resources"
@@ -54,7 +53,7 @@ set_target_properties(QtSpineExample PROPERTIES
 )
 
 target_link_libraries(QtSpineExample
-    PRIVATE Qt6::Quick Qt6::Multimedia
+    PRIVATE Qt6::Quick
     PRIVATE QtSpine
 )
 

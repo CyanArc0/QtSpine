@@ -2,7 +2,6 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
 import QtQuick.Controls.Basic
-import QtMultimedia
 import QtSpine
 
 ApplicationWindow {
@@ -56,11 +55,5 @@ ApplicationWindow {
         DragHandler { // 拖拽处理
             target: columbina
         }
-    }
-    MediaPlayer { // 背景音乐
-        source: "resources/Somnias a Luna.flac"
-        audioOutput: AudioOutput {}
-        loops: MediaPlayer.Infinite
-        autoPlay: true
     }
 }
