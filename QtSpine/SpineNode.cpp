@@ -1,4 +1,4 @@
- #include"SpineNode.h"
+#include"SpineNode.h"
 #include<QByteArray>
 #include<QMatrix4x4>
 #include<ranges>
