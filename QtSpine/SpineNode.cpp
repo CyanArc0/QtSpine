@@ -80,7 +80,7 @@ void SpineItem::SpineNode::prepare()
 
                 for(int32_t i = 0; i < c->numVertices; ++i) {
                     SpineVertex v;
-                    v.x = c->positions[i * 2 + 0] * m_transformScale.x() + m_transformOffset.x();
+                    v.x = +c->positions[i * 2 + 0] * m_transformScale.x() + m_transformOffset.x();
                     v.y = -c->positions[i * 2 + 1] * m_transformScale.y() + m_transformOffset.y();
                     v.u = c->uvs[i * 2 + 0];
                     v.v = c->uvs[i * 2 + 1];
