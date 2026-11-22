@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.18)
 
-project(QtSpine VERSION 2.0 LANGUAGES CXX)
+project(QtSpine VERSION 2.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -36,7 +36,7 @@ qt_add_qml_module(QtSpineExample
         "resources/p7_bg_gd.png"
 )
 
-qt_add_resources(QtSpineExample "spine_resources"
+qt_add_resources(QtSpineExample "resources"
     PREFIX "/"
     BASE "resources/shaonv"
     FILES
@@ -48,8 +48,8 @@ qt_add_resources(QtSpineExample "spine_resources"
 set_target_properties(QtSpineExample PROPERTIES
     WIN32_EXECUTABLE TRUE
     QT_ANDROID_PACKAGE_NAME "CyanArc.QtSpineExample"
-    QT_ANDROID_VERSION_CODE 3
-    QT_ANDROID_VERSION_NAME "2.0"
+    QT_ANDROID_VERSION_CODE 4
+    QT_ANDROID_VERSION_NAME "2.1"
 )
 
 target_link_libraries(QtSpineExample

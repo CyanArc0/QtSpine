@@ -4,6 +4,7 @@
 #include<spine/SpineString.h>
 #include<QImage>
 #include<QString>
+#include"qspine_cast.hpp"
 #include"error_handling.hpp"
 
 class QtTextureLoader : public spine::TextureLoader
@@ -15,7 +16,7 @@ public:
     {
         using namespace Qt::StringLiterals;
         // Load texture from path
-        const QString filepath = QString::fromUtf8(path.buffer(), path.length());
+        const QString filepath = qspine_cast<QString>(path);
         QImage image(filepath);
         if(image.isNull())[[unlikely]] {
             error_handling::warn(u"Spine: failed to load texture "_s + filepath);

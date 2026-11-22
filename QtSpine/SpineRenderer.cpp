@@ -1,4 +1,4 @@
-#include"SpineNode.h"
+#include"SpineRenderer.h"
 #include<QByteArray>
 #include<QMatrix4x4>
 #include<ranges>
@@ -15,21 +15,21 @@
 
 using namespace Qt::StringLiterals;
 
-QSGRenderNode::RenderingFlags SpineItem::SpineNode::flags() const
+QSGRenderNode::RenderingFlags SpinePlayer::SpineRenderer::flags() const
 {
     // 只用 QRhi 录制命令，且只在 z = 0 平面绘制。
     // 不声明 BoundedRectRendering：骨架内容可能超出 item 矩形。
     return NoExternalRendering | DepthAwareRendering;
 }
 
-QSGRenderNode::StateFlags SpineItem::SpineNode::changedStates() const
+QSGRenderNode::StateFlags SpinePlayer::SpineRenderer::changedStates() const
 {
     // render() 里设置了 scissor（viewport 交给场景图管理）。
     // 声明出来，场景图会在后续批次重新应用自己的 viewport / scissor。
     return ScissorState;
 }
 
-void SpineItem::SpineNode::prepare()
+void SpinePlayer::SpineRenderer::prepare()
 {
     QRhiRenderTarget* rt = this->renderTarget();
     QRhiCommandBuffer* cb = this->commandBuffer();
@@ -161,7 +161,7 @@ void SpineItem::SpineNode::prepare()
     cb->resourceUpdate(rub);
 }
 
-void SpineItem::SpineNode::render(const RenderState* state)
+void SpinePlayer::SpineRenderer::render(const RenderState* state)
 {
     if(m_frameGroups.empty() || !m_pipelineNormal || !m_vbuf || !m_ibuf || !m_renderCommands)
         return;
@@ -206,7 +206,7 @@ void SpineItem::SpineNode::render(const RenderState* state)
     }
 }
 
-void SpineItem::SpineNode::releaseResources()
+void SpinePlayer::SpineRenderer::releaseResources()
 {
     // 按"引用方 → 被引用方"倒序释放
     m_pipelineScreen.reset();
@@ -232,7 +232,7 @@ void SpineItem::SpineNode::releaseResources()
     m_rhi = nullptr;
 }
 
-void SpineItem::SpineNode::synchronize(SpineItem* item)
+void SpinePlayer::SpineRenderer::synchronize(SpinePlayer* item)
 {
     assert(item);
 
@@ -245,12 +245,12 @@ void SpineItem::SpineNode::synchronize(SpineItem* item)
         item->texturesNeedReset = false;
     }
 
-    if(!item->skeleton_ptr || !item->skeletonData_ptr) {
+    if(!item->skeleton || !item->skeletonData) {
         m_renderCommands = nullptr;   // 没有骨架 → 这一帧不画
         return;
     }
 
-    m_renderCommands = item->skeletonRenderer.render(*item->skeleton_ptr);
+    m_renderCommands = item->skeletonRenderer.render(*item->skeleton);
     if(!m_renderCommands) return;     // 空骨架（没有可画槽位）
 
     // 骨架坐标 → item 局部坐标的变换与 contentRect 共用，避免两处算法分叉
@@ -262,7 +262,7 @@ void SpineItem::SpineNode::synchronize(SpineItem* item)
     std::tie(m_transformScale,m_transformOffset) = std::move(*result);
 }
 
-void SpineItem::SpineNode::initialize(QRhiRenderTarget* rt)
+void SpinePlayer::SpineRenderer::initialize(QRhiRenderTarget* rt)
 {
     QRhi* rhi = rt->rhi();
     QRhiRenderPassDescriptor* rpd = rt->renderPassDescriptor();
@@ -367,7 +367,7 @@ void SpineItem::SpineNode::initialize(QRhiRenderTarget* rt)
 // createPipeline：失败返回 nullptr（告警一次），由 ensureResources 统一处理
 // ─────────────────────────────────────────────────────────────
 
-std::unique_ptr<QRhiGraphicsPipeline> SpineItem::SpineNode::createPipeline(QRhiRenderTarget* rt, spine::BlendMode blendMode)
+std::unique_ptr<QRhiGraphicsPipeline> SpinePlayer::SpineRenderer::createPipeline(QRhiRenderTarget* rt, spine::BlendMode blendMode)
 {
     assert(rt);
     assert(rt->renderPassDescriptor());
@@ -452,7 +452,7 @@ std::unique_ptr<QRhiGraphicsPipeline> SpineItem::SpineNode::createPipeline(QRhiR
 // 纹理：指针由 m_textureCache 持有；失败时缓存 nullptr，避免每帧重试
 // ─────────────────────────────────────────────────────────────
 
-QRhiTexture* SpineItem::SpineNode::getOrCreateTexture(QtTextureLoader::Texture* texKey, QRhiResourceUpdateBatch* rub)
+QRhiTexture* SpinePlayer::SpineRenderer::getOrCreateTexture(QtTextureLoader::Texture* texKey, QRhiResourceUpdateBatch* rub)
 {
     assert(texKey);
     assert(rub);
@@ -491,7 +491,7 @@ QRhiTexture* SpineItem::SpineNode::getOrCreateTexture(QtTextureLoader::Texture* 
 // SRB：指针由 m_srbCache 持有；失败时缓存 nullptr，避免每帧重试
 // ─────────────────────────────────────────────────────────────
 
-QRhiShaderResourceBindings* SpineItem::SpineNode::getOrCreateSrb(QtTextureLoader::Texture* texKey, QRhiTexture* texture)
+QRhiShaderResourceBindings* SpinePlayer::SpineRenderer::getOrCreateSrb(QtTextureLoader::Texture* texKey, QRhiTexture* texture)
 {
     assert(texKey);
     assert(texture);

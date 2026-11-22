@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.18)
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-    project(QtSpine VERSION 2.0 LANGUAGES CXX)
+    project(QtSpine VERSION 2.1 LANGUAGES CXX)
 endif()
 
 find_package(Qt6 REQUIRED COMPONENTS Quick Gui GuiPrivate ShaderTools)
@@ -22,6 +22,7 @@ qt_add_library(QtSpine STATIC
     QtTextureLoader.hpp
     getDefaultExtension.cpp
     error_handling.hpp
+    qspine_cast.hpp
 )
 add_library(QtSpine::QtSpine ALIAS QtSpine)
 
@@ -29,12 +30,12 @@ target_compile_features(QtSpine PUBLIC cxx_std_20)
 
 qt_add_qml_module(QtSpine
     URI QtSpine
-    VERSION 2.0
+    VERSION 2.1
     SOURCES
-        SpineItem.h
-        SpineItem.cpp
-        SpineNode.h
-        SpineNode.cpp
+        SpinePlayer.h
+        SpinePlayer.cpp
+        SpineRenderer.h
+        SpineRenderer.cpp
         SpineVertex.h
         SpineUniforms.h
         SpineShader.hpp

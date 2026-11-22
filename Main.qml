@@ -20,7 +20,7 @@ ApplicationWindow {
         source: "resources/p7_bg_gd.png"
         fillMode: Image.PreserveAspectCrop
     }
-    SpineItem {
+    SpinePlayer {
         id: columbina
 
         x: (parent.width - width) / 2
@@ -31,9 +31,14 @@ ApplicationWindow {
         skeletonSource: "qrc:/shaonv.json"
         atlasSource: "qrc:/shaonv.atlas"
 
+        skinName: "default"
+        animationName: "lizi"
+        loop: true
+
         Component.onCompleted: {
             playAnimation("a")
         }
+
 
         scale: (Math.sqrt(5) - 1) / 2
 

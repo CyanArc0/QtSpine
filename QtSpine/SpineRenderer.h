@@ -1,5 +1,5 @@
 #pragma once
-#include"SpineItem.h"
+#include"SpinePlayer.h"
 #include<QSGRenderNode>
 #include<QVector2D>
 #include<QVector>
@@ -14,9 +14,9 @@
 #include"QtTextureLoader.hpp"
 #include"SpineVertex.h"
 
-class SpineItem::SpineNode : public QSGRenderNode
+class SpinePlayer::SpineRenderer : public QSGRenderNode
 {
-    friend QSGNode* SpineItem::updatePaintNode(QSGNode* oldNode, UpdatePaintNodeData* updateInfo);
+    friend QSGNode* SpinePlayer::updatePaintNode(QSGNode* oldNode, UpdatePaintNodeData* updateInfo);
 public:
     virtual RenderingFlags flags() const override;
     virtual StateFlags changedStates() const override;
@@ -26,7 +26,7 @@ public:
     virtual void releaseResources() override;                   // 释放所有 QRhi 资源
 
 protected:
-    void synchronize(SpineItem* item); // 由 updatePaintNode() 在同步阶段调用（此时 GUI 线程被阻塞）
+    void synchronize(SpinePlayer* item); // 由 updatePaintNode() 在同步阶段调用（此时 GUI 线程被阻塞）
     void initialize(QRhiRenderTarget* rt);
 
 private:
