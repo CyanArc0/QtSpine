@@ -32,6 +32,7 @@ void SpinePlayer::componentComplete()
 {
     QQuickItem::componentComplete();
 
+    assert(config);
     skeletonSource = std::move(config->skeletonSource);
     atlasSource = std::move(config->atlasSource);
     loadAssets();
@@ -86,6 +87,32 @@ void SpinePlayer::set_atlasSource(const QUrl &new_atlasSource)
     assert(false);
 }
 
+QString SpinePlayer::get_skinName() const
+{
+    if(!isComponentComplete()) {
+        assert(config);
+        return config->skinName;
+    }
+
+    if(!isValid()) return u""_s;
+
+    assert(skeleton);
+    spine::String name = skeleton->getSkin()->getName();
+    return qspine_cast<QString>(name);
+}
+
+void SpinePlayer::set_skinName(const QString &new_skinName)
+{
+    if(!isComponentComplete()) {
+        assert(config);
+        config->skinName = new_skinName;
+        emit skinNameChanged();
+        return;
+    }
+
+    setSkin(new_skinName);
+}
+
 QString SpinePlayer::get_animationName() const
 {
     if(!isComponentComplete()) {
@@ -128,32 +155,6 @@ void SpinePlayer::set_loop(bool new_loop)
     }
 
     assert(false);
-}
-
-QString SpinePlayer::get_skinName() const
-{
-    if(!isComponentComplete()) {
-        assert(config);
-        return config->skinName;
-    }
-
-    if(!isValid()) return u""_s;
-
-    assert(skeleton);
-    spine::String name = skeleton->getSkin()->getName();
-    return qspine_cast<QString>(name);
-}
-
-void SpinePlayer::set_skinName(const QString &new_skinName)
-{
-    if(!isComponentComplete()) {
-        assert(config);
-        config->skinName = new_skinName;
-        emit skinNameChanged();
-        return;
-    }
-
-    setSkin(new_skinName);
 }
 
 QStringList SpinePlayer::get_skinNames() const
@@ -199,6 +200,7 @@ qreal SpinePlayer::get_skeletonHeight()const
 QRectF SpinePlayer::get_contentRect()const
 {
     if(!isValid()) return QRectF();
+
     auto[x,y,w,h] = [this] {
         float x = 0.0f, y = 0.0f, w = 0.0f, h = 0.0f;
         spine::Vector<float> vertices;   // getBounds 的暂存缓冲
@@ -239,6 +241,24 @@ bool SpinePlayer::setAnimation(int trackIndex, const QString &animationName, boo
     return true;
 }
 
+void SpinePlayer::setSkin(const QString& skinName)
+{
+    if(!isValid()) return;
+
+    assert(skeletonData);
+    spine::Skin* skin = skeletonData->findSkin(qspine_cast<spine::String>(skinName));
+    if(!skin)[[unlikely]] {
+        error_handling::warn(u"skin not found: "_s+skinName+u" ;available: "_s+'['+get_skinNames().join(',')+']');
+        return;
+    }
+
+    assert(skeleton);
+    skeleton->setSkin(skin);
+    emit skinNameChanged();
+
+    emit contentRectChanged();   // 换了附件，包围盒可能变
+}
+
 QSGNode* SpinePlayer::updatePaintNode(QSGNode* oldNode, UpdatePaintNodeData*)
 {
     SpineRenderer* node = static_cast<SpineRenderer*>(oldNode);
@@ -264,6 +284,7 @@ void SpinePlayer::clearAssets()
     texturesNeedReset = true;   // 让渲染端丢掉纹理 / SRB 缓存
     emit skeletonWidthChanged();
     emit skeletonHeightChanged();
+    emit skinNamesChanged();
     emit animationNamesChanged();
     emit contentRectChanged();
     setImplicitWidth(0);
@@ -338,26 +359,6 @@ bool SpinePlayer::loadAssets()
     assert(animationStateData);
     assert(animationState);
     return true;
-}
-
-void SpinePlayer::setSkin(const QString &skinName)
-{
-    if(!isValid()) return;
-
-    assert(skeletonData);
-    spine::Skin* skin = skeletonData->findSkin(qspine_cast<spine::String>(skinName));
-    if(!skin)[[unlikely]] {
-        error_handling::warn(u"skin not found: "_s+skinName+u" ;available: "_s+'['+get_skinNames().join(',')+']');
-        return;
-    }
-
-    assert(skeleton);
-    skeleton->setSkin(skin);
-    emit skinNameChanged();
-
-    update();
-
-    emit contentRectChanged();   // 换了附件，包围盒可能变
 }
 
 bool SpinePlayer::isValid()const

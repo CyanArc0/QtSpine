@@ -43,6 +43,9 @@ void SpinePlayer::SpineRenderer::prepare()
         m_geometryValid = false;   // 等资源恢复后重新构建
         return;
     }
+    assert(m_pipelineAdditive);
+    assert(m_pipelineMultiply);
+    assert(m_pipelineScreen);
 
     QRhiResourceUpdateBatch* rub = m_rhi->nextResourceUpdateBatch();
     if(!rub)[[unlikely]]
@@ -405,7 +408,7 @@ std::unique_ptr<QRhiGraphicsPipeline> SpinePlayer::SpineRenderer::createPipeline
     // 声明 UsesScissor 后，render() 每次都必须给出 scissor 矩形。
     pipeline->setFlags(QRhiGraphicsPipeline::UsesScissor);
 
-    // 混合因子对齐 spine-threejs 实现：
+    // 混合因子对齐 spine-webgl 实现：
     QRhiGraphicsPipeline::TargetBlend blend;
     blend.enable = true;
     switch(blendMode) {

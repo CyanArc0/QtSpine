@@ -76,6 +76,8 @@ public:
     Q_INVOKABLE bool playAnimation(const QString &animationName, bool loop = true, int trackIndex = 0);
     Q_INVOKABLE bool setAnimation(int trackIndex, const QString& animationName, bool loop);
 
+    Q_INVOKABLE void setSkin(const QString& skinName);
+
 public:
     explicit SpinePlayer(QQuickItem* parent = nullptr);
 
@@ -89,8 +91,6 @@ protected:
 private:
     void clearAssets();
     bool loadAssets();
-
-    void setSkin(const QString& skinName);
 
     bool isValid()const;
 

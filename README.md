@@ -131,7 +131,7 @@ target_link_libraries(appYourProject
 
 ## 在 QML 中使用
 
-CMake 引入后，QML 中即可 `import QtSpine` 并使用 `SpineItem`。
+CMake 引入后，QML 中即可 `import QtSpine` 并使用 `SpinePlayer`。
 
 ```qml
 import QtQuick
@@ -142,7 +142,7 @@ Window {
     height: 1080
     visible: true
 
-    SpineItem {
+    SpinePlayer {
         id: spine
         anchors.centerIn: parent
 
@@ -159,7 +159,7 @@ Window {
 
 ### 尺寸与布局
 
-不设置 `width` / `height` 时，`SpineItem` 的尺寸跟随 `implicitWidth` / `implicitHeight`；资源加载后两者分别等于 `skeletonWidth` / `skeletonHeight`。骨架按资源里的 setup 包围盒居中于 item。
+不设置 `width` / `height` 时，`SpinePlayer` 的尺寸跟随 `implicitWidth` / `implicitHeight`；资源加载后两者分别等于 `skeletonWidth` / `skeletonHeight`。骨架按资源里的 setup 包围盒居中于 item。
 
 `scale`、`rotation` 等是普通 QML 变换，只改变绘制结果，不影响 `width` / `height` / `skeletonWidth` / `skeletonHeight`，也不影响 `contentRect` 的局部坐标。需要外边距时用外层 `Item` 或显式 `width`/`height`。
 
@@ -192,7 +192,7 @@ implicitHeight = skeletonHeight
 `playAnimation` 是 `Q_INVOKABLE`，可以直接在 `Component.onCompleted` 或输入处理器里调用：
 
 ```qml
-SpineItem {
+SpinePlayer {
     id: spine
     skeletonSource: "qrc:/hero.json"
     atlasSource: "qrc:/hero.atlas"
@@ -227,11 +227,11 @@ SpineItem {
 
 ### 已知限制
 
-- **不要在 `SpineItem` 或它的祖先上开 `layer.enabled` / `ShaderEffect`**：一旦被 Qt 渲染进 FBO，就又变成离屏合成，Additive / Multiply / Screen 会退化。这是离屏合成本身的限制，与 QtSpine 无关。
+- **不要在 `SpinePlayer` 或它的祖先上开 `layer.enabled` / `ShaderEffect`**：一旦被 Qt 渲染进 FBO，就又变成离屏合成，Additive / Multiply / Screen 会退化。这是离屏合成本身的限制，与 QtSpine 无关。
 - atlas 里的 `filter` / `repeat` 字段目前被忽略：采样器统一为 `Linear` + mipmap + `ClampToEdge`（与 spine 官方 GL 示例一致）。像素画资源若出现模糊，请在导出时放大 atlas。
 - Tint Black 的暗色项不做顶点 alpha 预乘（与 spine-cpp 官方 GL 示例一致；spine-ts 会乘）。
 - 当前对外接口只覆盖基础播放：只有 `track 0`、始终循环，没有暂停/seek/变速/皮肤/整体着色/播放完成或事件回调。旧版的 `animationName`、`paused`、`timeScale`、`loop`、`mixDuration`、`skin`、`skinNames`、`skeletonColor`、`currentTime`、`skeletonScale` 属性，以及 `play()` / `pause()`、`playAnimation(name, track, loop)`、`addAnimation()`、`reload()`、`finished`、`eventFired`、`errorOccurred` 均已移除；缩放请用 QML 的 `scale`。
-- `contentRect` 每帧都会重新计算并发信号。QML 里多个绑定分别读取 `contentRect.x/y/width/height` 时，每帧会多次调用 `getBounds()`；大量 `SpineItem` 场景下建议只绑定整体矩形或自行缓存。
+- `contentRect` 每帧都会重新计算并发信号。QML 里多个绑定分别读取 `contentRect.x/y/width/height` 时，每帧会多次调用 `getBounds()`；大量 `SpinePlayer` 场景下建议只绑定整体矩形或自行缓存。
 
 ## 许可证与合规
 
