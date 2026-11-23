@@ -73,10 +73,10 @@ public:
     QRectF get_contentRect()const;
 
 public:
-    Q_INVOKABLE bool playAnimation(const QString &animationName, bool loop = true, int trackIndex = 0);
-    Q_INVOKABLE bool setAnimation(int trackIndex, const QString& animationName, bool loop);
-
     Q_INVOKABLE void setSkin(const QString& skinName);
+
+    Q_INVOKABLE void playAnimation(const QString &animationName, bool loop = true, std::size_t trackIndex = 0);
+    Q_INVOKABLE void setAnimation(std::size_t trackIndex, const QString& animationName, bool loop);
 
 public:
     explicit SpinePlayer(QQuickItem* parent = nullptr);

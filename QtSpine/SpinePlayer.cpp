@@ -152,6 +152,8 @@ bool SpinePlayer::get_loop() const
         return config->loop;
     }
 
+    if(not isValid()) return false;
+
     assert(animationState);
     spine::TrackEntry* track = animationState->getCurrent(0);
     if(!track) return false;
@@ -234,26 +236,6 @@ QRectF SpinePlayer::get_contentRect()const
     return QRectF(left, top, w * s.x(), h * s.y());
 }
 
-bool SpinePlayer::playAnimation(const QString &animationName, bool loop, int trackIndex)
-{
-    return setAnimation(trackIndex, animationName, loop);
-}
-
-bool SpinePlayer::setAnimation(int trackIndex, const QString &animationName, bool loop)
-{
-    if(not isValid()) return false;
-
-    assert(skeletonData);
-    spine::Animation *animation = skeletonData->findAnimation(qspine_cast<spine::String>(animationName));
-    if(!animation)[[unlikely]] {
-        error_handling::warn(u"animation not found: "_s+animationName+u" ;available: "_s+'['+get_animationNames().join(',')+']');
-        return false;
-    }
-    assert(animationState);
-    animationState->setAnimation(trackIndex, animation, loop);
-    return true;
-}
-
 void SpinePlayer::setSkin(const QString& skinName)
 {
     if(not isValid()) return;
@@ -267,9 +249,30 @@ void SpinePlayer::setSkin(const QString& skinName)
 
     assert(skeleton);
     skeleton->setSkin(skin);
+    skeleton->setSlotsToSetupPose();
     emit skinNameChanged();
-
     emit contentRectChanged();   // 换了附件，包围盒可能变
+}
+
+void SpinePlayer::playAnimation(const QString &animationName, bool loop, std::size_t trackIndex)
+{
+    setAnimation(trackIndex, animationName, loop);
+}
+
+void SpinePlayer::setAnimation(std::size_t trackIndex, const QString &animationName, bool loop)
+{
+    if(not isValid()) return;
+
+    assert(skeletonData);
+    spine::Animation *animation = skeletonData->findAnimation(qspine_cast<spine::String>(animationName));
+    if(!animation)[[unlikely]] {
+        error_handling::warn(u"animation not found: "_s+animationName+u" ;available: "_s+'['+get_animationNames().join(',')+']');
+        return;
+    }
+    assert(animationState);
+    animationState->setAnimation(trackIndex, animation, loop);
+    emit animationNameChanged();
+    emit loopChanged();
 }
 
 QSGNode* SpinePlayer::updatePaintNode(QSGNode* oldNode, UpdatePaintNodeData*)
@@ -295,6 +298,7 @@ void SpinePlayer::clearAssets()
     atlas.reset();
 
     texturesNeedReset = true;   // 让渲染端丢掉纹理 / SRB 缓存
+
     emit skeletonWidthChanged();
     emit skeletonHeightChanged();
     emit skinNamesChanged();
@@ -306,13 +310,6 @@ void SpinePlayer::clearAssets()
 
 bool SpinePlayer::loadAssets()
 {
-    // 按依赖倒序释放旧资源，接管新资源
-    animationState.reset();
-    animationStateData.reset();
-    skeleton.reset();
-    skeletonData.reset();
-    atlas.reset();
-
     // 读取所有文件到内存
     QFile atlasFile(QQmlFile::urlToLocalFileOrQrc(atlasSource));
     if(!atlasFile.open(QIODevice::ReadOnly))[[unlikely]] {
@@ -329,6 +326,13 @@ bool SpinePlayer::loadAssets()
     }
     const QByteArray skeletonFileData = skeletonFile.readAll();
     skeletonFile.close();
+
+    // 按依赖倒序释放旧资源，接管新资源
+    animationState.reset();
+    animationStateData.reset();
+    skeleton.reset();
+    skeletonData.reset();
+    atlas.reset();
 
     // 加载骨骼数据（根据后缀自动选择 JSON 或二进制）
     const QString atlasDir = QQmlFile::urlToLocalFileOrQrc(atlasSource.adjusted(QUrl::RemoveFilename));

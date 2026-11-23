@@ -37,7 +37,6 @@ ApplicationWindow {
 
         Component.onCompleted: {
             playAnimation("a")
-            console.log(skinName)
         }
 
         scale: (Math.sqrt(5) - 1) / 2

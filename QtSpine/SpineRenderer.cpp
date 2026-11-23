@@ -136,6 +136,7 @@ void SpinePlayer::SpineRenderer::prepare()
                 if(!m_vbuf->create())[[unlikely]] {
                     error_handling::warn(u"Spine RHI: failed to create vertex buffer; rendering disabled"_s);
                     m_vbuf.reset();
+                    m_geometryState = State::failed;
                     cb->resourceUpdate(rub);   // rub 里已有纹理/UBO 更新，先提交再退出
                     return;
                 }
@@ -148,6 +149,7 @@ void SpinePlayer::SpineRenderer::prepare()
                 if(!m_ibuf->create())[[unlikely]] {
                     error_handling::warn(u"Spine RHI: failed to create index buffer; rendering disabled"_s);
                     m_ibuf.reset();
+                    m_geometryState = State::failed;
                     cb->resourceUpdate(rub);
                     return;
                 }
@@ -175,11 +177,14 @@ void SpinePlayer::SpineRenderer::prepare()
 
 void SpinePlayer::SpineRenderer::render(const RenderState* state)
 {
-    if(m_frameGroups.empty() || !m_pipelineNormal || !m_vbuf || !m_ibuf || !m_renderCommands)
+    if(m_frameGroups.empty() or m_geometryState != State::valid or !m_renderCommands)
         return;
+    assert(m_pipelineNormal);
     assert(m_pipelineAdditive);
     assert(m_pipelineMultiply);
     assert(m_pipelineScreen);
+    assert(m_vbuf);
+    assert(m_ibuf);
 
     QRhiCommandBuffer* cb = this->commandBuffer();
     assert(cb);
@@ -383,7 +388,7 @@ void SpinePlayer::SpineRenderer::initialize(QRhiRenderTarget* rt)
 }
 
 // ─────────────────────────────────────────────────────────────
-// createPipeline：失败返回 nullptr（告警一次），由 ensureResources 统一处理
+// createPipeline：失败返回 nullptr（告警一次），由 initialize 统一处理
 // ─────────────────────────────────────────────────────────────
 
 std::unique_ptr<QRhiGraphicsPipeline> SpinePlayer::SpineRenderer::createPipeline(QRhiRenderTarget* rt, spine::BlendMode blendMode)
