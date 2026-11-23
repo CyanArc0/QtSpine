@@ -37,11 +37,14 @@ ApplicationWindow {
 
         Component.onCompleted: {
             playAnimation("a")
+            console.log(skinName)
         }
-
 
         scale: (Math.sqrt(5) - 1) / 2
 
+        DragHandler { // 拖拽处理
+            target: columbina
+        }
         /*
         Rectangle { // 边框
             //anchors.fill: parent
@@ -54,8 +57,5 @@ ApplicationWindow {
             border.width: 1 / parent.scale
         }
         */
-        DragHandler { // 拖拽处理
-            target: columbina
-        }
     }
 }

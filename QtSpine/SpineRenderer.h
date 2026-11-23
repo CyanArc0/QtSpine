@@ -40,17 +40,14 @@ private:
         std::size_t indexOffset;
         std::size_t indexCount;
     };
-    using PipelineFingerprint = std::pair<int,QVector<quint32>>;
+    using Fingerprint = std::pair<int,QVector<quint32>>;
+    enum class State : int8_t {failed = -1, pending = 0, valid = +1};
 
     QRhi* m_rhi = nullptr;
 
-    PipelineFingerprint m_fingerprint;   // 建 pipeline 时 render pass 的格式指纹
+    Fingerprint m_fingerprint;   // 建 pipeline 时 render pass 的格式指纹
 
-    // 资源创建失败后不再每帧重试（否则 60Hz 刷日志），
-    // 只有当设备 / render pass 环境变了才重新尝试。
-    bool m_creationFailed = false;
-    // 只有在 synchronize() 更新过内容时才重建/上传几何
-    bool m_geometryValid = false;
+    State m_geometryState = State::pending;
 
     std::unique_ptr<QRhiSampler> m_sampler;
     std::unique_ptr<QRhiBuffer>  m_ubo;

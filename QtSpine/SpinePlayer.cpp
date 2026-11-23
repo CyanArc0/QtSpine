@@ -36,8 +36,10 @@ void SpinePlayer::componentComplete()
     skeletonSource = std::move(config->skeletonSource);
     atlasSource = std::move(config->atlasSource);
     loadAssets();
-    setSkin(config->skinName);
-    playAnimation(config->animationName,config->loop);
+    if(!config->skinName.isEmpty())
+        setSkin(config->skinName);
+    if(!config->animationName.isEmpty())
+        playAnimation(config->animationName,config->loop);
     update();
 
     config.reset();
@@ -94,11 +96,12 @@ QString SpinePlayer::get_skinName() const
         return config->skinName;
     }
 
-    if(!isValid()) return u""_s;
+    if(not isValid()) return u""_s;
 
     assert(skeleton);
-    spine::String name = skeleton->getSkin()->getName();
-    return qspine_cast<QString>(name);
+    spine::Skin* skin = skeleton->getSkin();
+    if(!skin) return u""_s;
+    return qspine_cast<QString>(skin->getName());
 }
 
 void SpinePlayer::set_skinName(const QString &new_skinName)
@@ -120,11 +123,14 @@ QString SpinePlayer::get_animationName() const
         return config->animationName;
     }
 
-    if(!isValid()) return u""_s;
+    if(not isValid()) return u""_s;
 
     assert(animationState);
-    spine::String name = animationState->getCurrent(0)->getAnimation()->getName();
-    return qspine_cast<QString>(name);
+    spine::TrackEntry* track = animationState->getCurrent(0);
+    if(!track) return u""_s;
+    spine::Animation* animation = track->getAnimation();
+    if(!animation) return u""_s;
+    return qspine_cast<QString>(animation->getName());
 }
 
 void SpinePlayer::set_animationName(const QString &new_animationName)
@@ -147,7 +153,9 @@ bool SpinePlayer::get_loop() const
     }
 
     assert(animationState);
-    return animationState->getCurrent(0)->getLoop();
+    spine::TrackEntry* track = animationState->getCurrent(0);
+    if(!track) return false;
+    return track->getLoop();
 }
 
 void SpinePlayer::set_loop(bool new_loop)
@@ -164,7 +172,7 @@ void SpinePlayer::set_loop(bool new_loop)
 
 QStringList SpinePlayer::get_skinNames() const
 {
-    if(!isValid()) return {};
+    if(not isValid()) return {};
 
     QStringList names;
     assert(skeletonData);
@@ -177,7 +185,7 @@ QStringList SpinePlayer::get_skinNames() const
 
 QStringList SpinePlayer::get_animationNames()const
 {
-    if(!isValid()) return {};
+    if(not isValid()) return {};
 
     QStringList names;
     assert(skeletonData);
@@ -190,21 +198,21 @@ QStringList SpinePlayer::get_animationNames()const
 
 qreal SpinePlayer::get_skeletonWidth()const
 {
-    if(!isValid()) return 0;
+    if(not isValid()) return 0;
     assert(skeletonData);
     return skeletonData->getWidth();
 }
 
 qreal SpinePlayer::get_skeletonHeight()const
 {
-    if(!isValid()) return 0;
+    if(not isValid()) return 0;
     assert(skeletonData);
     return skeletonData->getHeight();
 }
 
 QRectF SpinePlayer::get_contentRect()const
 {
-    if(!isValid()) return QRectF();
+    if(not isValid()) return QRectF();
 
     auto[x,y,w,h] = [this] {
         float x = 0.0f, y = 0.0f, w = 0.0f, h = 0.0f;
@@ -233,7 +241,7 @@ bool SpinePlayer::playAnimation(const QString &animationName, bool loop, int tra
 
 bool SpinePlayer::setAnimation(int trackIndex, const QString &animationName, bool loop)
 {
-    if(!isValid()) return false;
+    if(not isValid()) return false;
 
     assert(skeletonData);
     spine::Animation *animation = skeletonData->findAnimation(qspine_cast<spine::String>(animationName));
@@ -248,7 +256,7 @@ bool SpinePlayer::setAnimation(int trackIndex, const QString &animationName, boo
 
 void SpinePlayer::setSkin(const QString& skinName)
 {
-    if(!isValid()) return;
+    if(not isValid()) return;
 
     assert(skeletonData);
     spine::Skin* skin = skeletonData->findSkin(qspine_cast<spine::String>(skinName));
@@ -380,7 +388,7 @@ bool SpinePlayer::isValid()const
 
 std::optional<std::pair<QVector2D,QVector2D>> SpinePlayer::contentTransform() const
 {
-    if(!isValid()) return std::nullopt;
+    if(not isValid()) return std::nullopt;
 
     const float w = this->width();
     const float h = this->height();
@@ -400,7 +408,7 @@ std::optional<std::pair<QVector2D,QVector2D>> SpinePlayer::contentTransform() co
 
 void SpinePlayer::advance()
 {
-    if(!isValid()) return;
+    if(not isValid()) return;
 
     const qint64 now = times.elapsed();
     assert(now>=0);

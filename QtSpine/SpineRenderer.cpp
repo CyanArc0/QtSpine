@@ -38,11 +38,20 @@ void SpinePlayer::SpineRenderer::prepare()
 
     initialize(rt);
 
-    // 资源未就绪（创建失败）或没有内容：这一帧什么都不画
-    if(!m_renderCommands || !m_pipelineNormal || !m_sampler || !m_ubo || !m_dummySrb) {
-        m_geometryValid = false;   // 等资源恢复后重新构建
+    // 资源层失败：initialize 已设 failed，等环境变化或 releaseResources() 再试
+    if(m_geometryState == State::failed)
+        return;
+
+    // 内容为空（空骨架 / 尺寸退化）：这一帧不画，标记待重建
+    if(!m_renderCommands) {
+        m_geometryState = State::pending;
         return;
     }
+
+    assert(m_sampler);
+    assert(m_ubo);
+    assert(m_dummySrb);
+    assert(m_pipelineNormal);
     assert(m_pipelineAdditive);
     assert(m_pipelineMultiply);
     assert(m_pipelineScreen);
@@ -53,7 +62,7 @@ void SpinePlayer::SpineRenderer::prepare()
 
     // 顶点/索引/纹理只在内容真的变过（synchronize 跑过）时重建：
     // 窗口因为其它 item 重绘时，没必要把同样的几何再算一遍、再传一遍。
-    if(!m_geometryValid) {
+    if(m_geometryState == State::pending) {
         m_vertexData.clear();
         m_indexData.clear();
         m_frameGroups.clear();
@@ -148,7 +157,7 @@ void SpinePlayer::SpineRenderer::prepare()
             rub->updateDynamicBuffer(m_ibuf.get(), 0, ibytes, m_indexData.data());
         }
 
-        m_geometryValid = true;
+        m_geometryState = State::valid;
     }
 
     {
@@ -168,6 +177,9 @@ void SpinePlayer::SpineRenderer::render(const RenderState* state)
 {
     if(m_frameGroups.empty() || !m_pipelineNormal || !m_vbuf || !m_ibuf || !m_renderCommands)
         return;
+    assert(m_pipelineAdditive);
+    assert(m_pipelineMultiply);
+    assert(m_pipelineScreen);
 
     QRhiCommandBuffer* cb = this->commandBuffer();
     assert(cb);
@@ -228,8 +240,7 @@ void SpinePlayer::SpineRenderer::releaseResources()
     m_ubo.reset();
     m_sampler.reset();
 
-    m_geometryValid = false;    // 缓冲都释放了，下次 prepare 必须重建
-    m_creationFailed = false;  // 重新给一次创建机会
+    m_geometryState = State::pending;
 
     m_fingerprint = {};
     m_rhi = nullptr;
@@ -239,7 +250,9 @@ void SpinePlayer::SpineRenderer::synchronize(SpinePlayer* item)
 {
     assert(item);
 
-    m_geometryValid = false;   // 内容换了一帧，prepare() 里要重建
+    // 内容换了一帧，prepare() 里要重建
+    if(m_geometryState == State::valid)
+        m_geometryState = State::pending;
 
     if(item->texturesNeedReset) {
         // 纹理换了：引用旧纹理的 SRB 必须一起清掉
@@ -248,7 +261,7 @@ void SpinePlayer::SpineRenderer::synchronize(SpinePlayer* item)
         item->texturesNeedReset = false;
     }
 
-    if(!item->skeleton || !item->skeletonData) {
+    if(not item->isValid()) {
         m_renderCommands = nullptr;   // 没有骨架 → 这一帧不画
         return;
     }
@@ -278,14 +291,17 @@ void SpinePlayer::SpineRenderer::initialize(QRhiRenderTarget* rt)
         m_rhi = rhi;
     }
 
-    PipelineFingerprint fingerprint = {rt->sampleCount(),rpd->serializedFormat()};
+    Fingerprint fingerprint = {rt->sampleCount(),rpd->serializedFormat()};
     const bool sameFingerprint = m_fingerprint == fingerprint;
 
     // 同一环境下已经失败过：不再每帧重试（否则 60Hz 刷日志），
     // 等设备 / render pass 环境变化，或 releaseResources() 之后再试。
-    if(m_creationFailed and sameFingerprint)
-        return;
-    m_creationFailed = false;
+    if(m_geometryState == State::failed) {
+        if(sameFingerprint)
+            return;
+        // 环境变化：清除失败状态，允许重试
+        m_geometryState = State::pending;
+    }
     m_fingerprint = fingerprint;
 
     // ── sampler / UBO / dummy SRB 与 render target 无关，只在缺失时补建 ──
@@ -299,7 +315,7 @@ void SpinePlayer::SpineRenderer::initialize(QRhiRenderTarget* rt)
         if(!m_sampler->create())[[unlikely]] {
             error_handling::warn(u"Spine RHI: failed to create sampler; rendering disabled"_s);
             m_sampler.reset();
-            m_creationFailed = true;
+            m_geometryState = State::failed;
             return;
         }
     }
@@ -311,7 +327,7 @@ void SpinePlayer::SpineRenderer::initialize(QRhiRenderTarget* rt)
         if(!m_ubo->create())[[unlikely]] {
             error_handling::warn(u"Spine RHI: failed to create uniform buffer; rendering disabled"_s);
             m_ubo.reset();
-            m_creationFailed = true;
+            m_geometryState = State::failed;
             return;
         }
     }
@@ -331,7 +347,7 @@ void SpinePlayer::SpineRenderer::initialize(QRhiRenderTarget* rt)
         if(!m_dummySrb->create())[[unlikely]] {
             error_handling::warn(u"Spine RHI: failed to create shader resource bindings; rendering disabled"_s);
             m_dummySrb.reset();
-            m_creationFailed = true;
+            m_geometryState = State::failed;
             return;
         }
     }
@@ -360,7 +376,7 @@ void SpinePlayer::SpineRenderer::initialize(QRhiRenderTarget* rt)
         m_pipelineNormal.reset();
         m_pipelineAdditive.reset();
         m_pipelineMultiply.reset();
-        m_creationFailed = true;
+        m_geometryState = State::failed;
         return;
     }
 
@@ -459,7 +475,6 @@ QRhiTexture* SpinePlayer::SpineRenderer::getOrCreateTexture(QtTextureLoader::Tex
 {
     assert(texKey);
     assert(rub);
-
 
     if(auto it = m_textureCache.find(texKey); it != m_textureCache.end())
         return it->second.get();   // 可能为 nullptr：上次就失败了
