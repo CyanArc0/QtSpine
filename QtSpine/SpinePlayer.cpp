@@ -47,7 +47,7 @@ void SpinePlayer::componentComplete()
 
 QUrl SpinePlayer::get_skeletonSource()const
 {
-    if(!isComponentComplete()) {
+    if(not isComponentComplete()) {
         assert(config);
         return config->skeletonSource;
     }
@@ -57,7 +57,7 @@ QUrl SpinePlayer::get_skeletonSource()const
 
 void SpinePlayer::set_skeletonSource(const QUrl &new_skeletonSource)
 {
-    if(!isComponentComplete()) {
+    if(not isComponentComplete()) {
         assert(config);
         config->skeletonSource = new_skeletonSource;
         emit skeletonSourceChanged();
@@ -69,7 +69,7 @@ void SpinePlayer::set_skeletonSource(const QUrl &new_skeletonSource)
 
 QUrl SpinePlayer::get_atlasSource()const
 {
-    if(!isComponentComplete()) {
+    if(not isComponentComplete()) {
         assert(config);
         return config->atlasSource;
     }
@@ -79,7 +79,7 @@ QUrl SpinePlayer::get_atlasSource()const
 
 void SpinePlayer::set_atlasSource(const QUrl &new_atlasSource)
 {
-    if(!isComponentComplete()) {
+    if(not isComponentComplete()) {
         assert(config);
         config->atlasSource = new_atlasSource;
         emit atlasSourceChanged();
@@ -91,7 +91,7 @@ void SpinePlayer::set_atlasSource(const QUrl &new_atlasSource)
 
 QString SpinePlayer::get_skinName() const
 {
-    if(!isComponentComplete()) {
+    if(not isComponentComplete()) {
         assert(config);
         return config->skinName;
     }
@@ -106,7 +106,7 @@ QString SpinePlayer::get_skinName() const
 
 void SpinePlayer::set_skinName(const QString &new_skinName)
 {
-    if(!isComponentComplete()) {
+    if(not isComponentComplete()) {
         assert(config);
         config->skinName = new_skinName;
         emit skinNameChanged();
@@ -118,7 +118,7 @@ void SpinePlayer::set_skinName(const QString &new_skinName)
 
 QString SpinePlayer::get_animationName() const
 {
-    if(!isComponentComplete()) {
+    if(not isComponentComplete()) {
         assert(config);
         return config->animationName;
     }
@@ -135,7 +135,7 @@ QString SpinePlayer::get_animationName() const
 
 void SpinePlayer::set_animationName(const QString &new_animationName)
 {
-    if(!isComponentComplete()) {
+    if(not isComponentComplete()) {
         assert(config);
         config->animationName = new_animationName;
         emit animationNameChanged();
@@ -147,7 +147,7 @@ void SpinePlayer::set_animationName(const QString &new_animationName)
 
 bool SpinePlayer::get_loop() const
 {
-    if(!isComponentComplete()) {
+    if(not isComponentComplete()) {
         assert(config);
         return config->loop;
     }
@@ -160,7 +160,7 @@ bool SpinePlayer::get_loop() const
 
 void SpinePlayer::set_loop(bool new_loop)
 {
-    if(!isComponentComplete()) {
+    if(not isComponentComplete()) {
         assert(config);
         config->loop = new_loop;
         emit loopChanged();
