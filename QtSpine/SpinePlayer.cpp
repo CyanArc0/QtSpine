@@ -120,7 +120,11 @@ QString SpinePlayer::get_animationName() const
         return config->animationName;
     }
 
-    assert(false);
+    if(!isValid()) return u""_s;
+
+    assert(animationState);
+    spine::String name = animationState->getCurrent(0)->getAnimation()->getName();
+    return qspine_cast<QString>(name);
 }
 
 void SpinePlayer::set_animationName(const QString &new_animationName)
@@ -142,7 +146,8 @@ bool SpinePlayer::get_loop() const
         return config->loop;
     }
 
-    assert(false);
+    assert(animationState);
+    return animationState->getCurrent(0)->getLoop();
 }
 
 void SpinePlayer::set_loop(bool new_loop)
