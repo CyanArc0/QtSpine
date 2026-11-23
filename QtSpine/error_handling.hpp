@@ -13,9 +13,9 @@ namespace error_handling
     }
 
     using cstring_t = const char*;
-    [[noreturn]] inline void panic(cstring_t msg)noexcept
+    [[noreturn]] inline void panic(cstring_t s)noexcept
     {
-        std::fputs(msg, stderr);
+        std::fputs(s, stderr);
         std::fputc('\n', stderr);
         std::fflush(stderr);
         std::abort();

@@ -18,12 +18,12 @@ class SpinePlayer::SpineRenderer : public QSGRenderNode
 {
     friend QSGNode* SpinePlayer::updatePaintNode(QSGNode* oldNode, UpdatePaintNodeData* updateInfo);
 public:
-    virtual RenderingFlags flags() const override;
-    virtual StateFlags changedStates() const override;
+    virtual RenderingFlags flags()const override;
+    virtual StateFlags changedStates()const override;
 
-    virtual void prepare() override;                            // 更新缓冲、纹理、pipeline
-    virtual void render(const RenderState* state) override;     // 只记录 draw call
-    virtual void releaseResources() override;                   // 释放所有 QRhi 资源
+    virtual void prepare()override;                            // 更新缓冲、纹理、pipeline
+    virtual void render(const RenderState* state)override;     // 只记录 draw call
+    virtual void releaseResources()override;                   // 释放所有 QRhi 资源
 
 protected:
     void synchronize(SpinePlayer* item); // 由 updatePaintNode() 在同步阶段调用（此时 GUI 线程被阻塞）
@@ -50,7 +50,7 @@ private:
     State m_geometryState = State::pending;
 
     std::unique_ptr<QRhiSampler> m_sampler;
-    std::unique_ptr<QRhiBuffer>  m_ubo;
+    std::unique_ptr<QRhiBuffer> m_ubo;
 
     std::unique_ptr<QRhiBuffer> m_vbuf;
     std::unique_ptr<QRhiBuffer> m_ibuf;

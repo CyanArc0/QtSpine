@@ -75,7 +75,7 @@ public:
 public:
     Q_INVOKABLE void setSkin(const QString& skinName);
 
-    Q_INVOKABLE void playAnimation(const QString &animationName, bool loop = true, std::size_t trackIndex = 0);
+    Q_INVOKABLE void playAnimation(const QString& animationName, bool loop = true, std::size_t trackIndex = 0);
     Q_INVOKABLE void setAnimation(std::size_t trackIndex, const QString& animationName, bool loop);
 
 public:
