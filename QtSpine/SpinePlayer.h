@@ -52,25 +52,25 @@ signals:
     void contentRectChanged();
 
 public:
-    QUrl get_skeletonSource()const;
+    QUrl get_skeletonSource() const;
     void set_skeletonSource(const QUrl&);
-    QUrl get_atlasSource()const;
+    QUrl get_atlasSource() const;
     void set_atlasSource(const QUrl&);
 
-    QString get_skinName()const;
+    QString get_skinName() const;
     void set_skinName(const QString&);
-    QString get_animationName()const;
+    QString get_animationName() const;
     void set_animationName(const QString&);
-    bool get_loop()const;
+    bool get_loop() const;
     void set_loop(bool);
 
     QStringList get_skinNames() const;
-    QStringList get_animationNames()const;
+    QStringList get_animationNames() const;
 
-    qreal get_skeletonWidth()const;
-    qreal get_skeletonHeight()const;
+    qreal get_skeletonWidth() const;
+    qreal get_skeletonHeight() const;
 
-    QRectF get_contentRect()const;
+    QRectF get_contentRect() const;
 
 public:
     Q_INVOKABLE void setSkin(const QString& skinName);
@@ -81,7 +81,7 @@ public:
 public:
     explicit SpinePlayer(QQuickItem* parent = nullptr);
 
-    virtual void componentComplete()override;
+    virtual void componentComplete() override;
 
 protected:
     class SpineRenderer;
@@ -92,7 +92,7 @@ private:
     bool loadAssets(const QUrl& skeletonSource, const QUrl& atlasSource);
     void clearAssets();
 
-    bool isValid()const;
+    bool isValid() const;
 
     std::optional<std::pair<QVector2D,QVector2D>> contentTransform() const;
 

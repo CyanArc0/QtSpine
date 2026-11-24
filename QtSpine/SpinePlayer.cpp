@@ -45,7 +45,7 @@ void SpinePlayer::componentComplete()
     config.reset();
 }
 
-QUrl SpinePlayer::get_skeletonSource()const
+QUrl SpinePlayer::get_skeletonSource() const
 {
     if(not isComponentComplete()) {
         assert(config);
@@ -67,7 +67,7 @@ void SpinePlayer::set_skeletonSource(const QUrl& new_skeletonSource)
     assert(false);
 }
 
-QUrl SpinePlayer::get_atlasSource()const
+QUrl SpinePlayer::get_atlasSource() const
 {
     if(not isComponentComplete()) {
         assert(config);
@@ -185,7 +185,7 @@ QStringList SpinePlayer::get_skinNames() const
     return names;
 }
 
-QStringList SpinePlayer::get_animationNames()const
+QStringList SpinePlayer::get_animationNames() const
 {
     if(not isValid()) return {};
 
@@ -198,21 +198,21 @@ QStringList SpinePlayer::get_animationNames()const
     return names;
 }
 
-qreal SpinePlayer::get_skeletonWidth()const
+qreal SpinePlayer::get_skeletonWidth() const
 {
     if(not isValid()) return 0;
     assert(skeletonData);
     return skeletonData->getWidth();
 }
 
-qreal SpinePlayer::get_skeletonHeight()const
+qreal SpinePlayer::get_skeletonHeight() const
 {
     if(not isValid()) return 0;
     assert(skeletonData);
     return skeletonData->getHeight();
 }
 
-QRectF SpinePlayer::get_contentRect()const
+QRectF SpinePlayer::get_contentRect() const
 {
     if(not isValid()) return QRectF();
 
@@ -373,7 +373,7 @@ bool SpinePlayer::loadAssets(const QUrl& skeletonSource, const QUrl& atlasSource
     return true;
 }
 
-bool SpinePlayer::isValid()const
+bool SpinePlayer::isValid() const
 {
     if(atlas) {
         assert(skeletonData);
