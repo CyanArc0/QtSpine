@@ -5,6 +5,7 @@
 //   1: aUV         Float2       offset  8
 //   2: aColor      UNormByte4   offset 16
 //   3: aDarkColor  UNormByte4   offset 20
+/* SpineVertex */
 layout(location = 0) in vec2 aPos;
 layout(location = 1) in vec2 aUV;
 layout(location = 2) in vec4 aColor;
@@ -15,6 +16,7 @@ layout(location = 1) out vec4 vColor;      // 预乘后的 light tint
 layout(location = 2) out vec4 vDarkColor;  // 只使用 rgb
 
 // 与 C++ 端 80 字节 UBO 对应：mat4(64) + float(4) + 12 字节 padding
+/* SpineUniforms */
 layout(std140, binding = 0) uniform buf {
     mat4 qt_Matrix;
     float qt_Opacity;
