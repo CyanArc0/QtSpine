@@ -44,10 +44,8 @@ private:
     using Fingerprint = std::pair<int,QVector<quint32>>;
 
     QRhi* m_rhi = nullptr;
-
+    Fingerprint m_fingerprint = {};
     State m_geometryState = State::Pending;
-
-    Fingerprint m_fingerprint;
 
     std::unique_ptr<QRhiSampler> m_sampler;
     std::unique_ptr<QRhiBuffer> m_ubo;
