@@ -17,15 +17,11 @@ using namespace Qt::StringLiterals;
 
 QSGRenderNode::RenderingFlags SpinePlayer::SpineRenderer::flags() const
 {
-    // 只用 QRhi 录制命令，且只在 z = 0 平面绘制。
-    // 不声明 BoundedRectRendering：骨架内容可能超出 item 矩形。
-    return NoExternalRendering | DepthAwareRendering;
+    return NoExternalRendering;
 }
 
 QSGRenderNode::StateFlags SpinePlayer::SpineRenderer::changedStates() const
 {
-    // render() 里设置了 scissor（viewport 交给场景图管理）。
-    // 声明出来，场景图会在后续批次重新应用自己的 viewport / scissor。
     return ScissorState;
 }
 
