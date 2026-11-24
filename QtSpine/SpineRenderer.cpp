@@ -114,14 +114,14 @@ void SpinePlayer::SpineRenderer::prepare()
             for(spine::RenderCommand* c = m_renderCommands; c; c = c->next) {
                 if(c->numVertices <= 0 || !c->texture) continue;
                 auto* key = static_cast<QtTextureLoader::Texture*>(c->texture);
-                getOrCreateTexture(key, rub);
+                acquireTexture(key, rub);
             }
 
             // SRB 也在 pass 之外建好，render() 里只查表
             for(const auto texKey : m_frameGroups | std::views::transform(&FrameGroup::texKey)) {
                 auto it = m_textureCache.find(texKey);
                 if(it == m_textureCache.end() || !it->second) continue;
-                getOrCreateSrb(texKey, it->second.get());
+                acquireSrb(texKey, it->second.get());
             }
 
             const uint32_t vbytes = m_vertexData.size() * sizeof(SpineVertex);
@@ -302,8 +302,7 @@ void SpinePlayer::SpineRenderer::initialize(QRhiRenderTarget* rt)
     // 同一环境下已经失败过：不再每帧重试（否则 60Hz 刷日志），
     // 等设备 / render pass 环境变化，或 releaseResources() 之后再试。
     if(m_geometryState == State::failed) {
-        if(sameFingerprint)
-            return;
+        if(sameFingerprint) return;
         // 环境变化：清除失败状态，允许重试
         m_geometryState = State::pending;
     }
@@ -476,7 +475,7 @@ std::unique_ptr<QRhiGraphicsPipeline> SpinePlayer::SpineRenderer::createPipeline
 // 纹理：指针由 m_textureCache 持有；失败时缓存 nullptr，避免每帧重试
 // ─────────────────────────────────────────────────────────────
 
-QRhiTexture* SpinePlayer::SpineRenderer::getOrCreateTexture(QtTextureLoader::Texture* texKey, QRhiResourceUpdateBatch* rub)
+QRhiTexture* SpinePlayer::SpineRenderer::acquireTexture(QtTextureLoader::Texture* texKey, QRhiResourceUpdateBatch* rub)
 {
     assert(texKey);
     assert(rub);
@@ -514,7 +513,7 @@ QRhiTexture* SpinePlayer::SpineRenderer::getOrCreateTexture(QtTextureLoader::Tex
 // SRB：指针由 m_srbCache 持有；失败时缓存 nullptr，避免每帧重试
 // ─────────────────────────────────────────────────────────────
 
-QRhiShaderResourceBindings* SpinePlayer::SpineRenderer::getOrCreateSrb(QtTextureLoader::Texture* texKey, QRhiTexture* texture)
+QRhiShaderResourceBindings* SpinePlayer::SpineRenderer::acquireSrb(QtTextureLoader::Texture* texKey, QRhiTexture* texture)
 {
     assert(texKey);
     assert(texture);

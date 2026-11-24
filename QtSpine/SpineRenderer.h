@@ -31,8 +31,8 @@ protected:
 
 private:
     std::unique_ptr<QRhiGraphicsPipeline> createPipeline(QRhiRenderTarget* rt, spine::BlendMode blendMode);
-    QRhiTexture* getOrCreateTexture(QtTextureLoader::Texture* texKey, QRhiResourceUpdateBatch* rub);
-    QRhiShaderResourceBindings* getOrCreateSrb(QtTextureLoader::Texture* texKey, QRhiTexture* texture);
+    QRhiTexture* acquireTexture(QtTextureLoader::Texture* texKey, QRhiResourceUpdateBatch* rub);
+    QRhiShaderResourceBindings* acquireSrb(QtTextureLoader::Texture* texKey, QRhiTexture* texture);
 
     struct FrameGroup {
         QtTextureLoader::Texture* texKey;
@@ -40,14 +40,14 @@ private:
         std::size_t indexOffset;
         std::size_t indexCount;
     };
-    using Fingerprint = std::pair<int,QVector<quint32>>;
     enum class State : int8_t {failed = -1, pending = 0, valid = +1};
+    using Fingerprint = std::pair<int,QVector<quint32>>;
 
     QRhi* m_rhi = nullptr;
 
-    Fingerprint m_fingerprint;   // 建 pipeline 时 render pass 的格式指纹
-
     State m_geometryState = State::pending;
+
+    Fingerprint m_fingerprint;
 
     std::unique_ptr<QRhiSampler> m_sampler;
     std::unique_ptr<QRhiBuffer> m_ubo;
@@ -65,7 +65,6 @@ private:
     std::unique_ptr<QRhiGraphicsPipeline> m_pipelineScreen;
 
     spine::RenderCommand* m_renderCommands = nullptr;
-
     QVector2D m_transformScale;
     QVector2D m_transformOffset;
 
