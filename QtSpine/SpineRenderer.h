@@ -40,11 +40,11 @@ private:
         std::size_t indexOffset;
         std::size_t indexCount;
     };
-    enum class State : int8_t {Failed = -1, Pending = 0, Valid = +1};
     using Fingerprint = std::pair<int,QVector<quint32>>;
+    enum class State : int8_t {Failed = -1, Pending = 0, Valid = +1};
 
     QRhi* m_rhi = nullptr;
-    Fingerprint m_fingerprint = {};
+    Fingerprint m_fingerprint;
     State m_geometryState = State::Pending;
 
     std::unique_ptr<QRhiSampler> m_sampler;

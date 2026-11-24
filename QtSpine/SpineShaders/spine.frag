@@ -2,7 +2,7 @@
 
 layout(location = 0) in vec2 vUV;
 layout(location = 1) in vec4 vColor;      // 预乘后的 light tint
-layout(location = 2) in vec4 vDarkColor;  // 未预乘的 dark tint（只用 rgb）
+layout(location = 2) in vec4 vDarkColor;  // 已预乘的 dark tint（只用 rgb）
 
 layout(location = 0) out vec4 fragColor;
 

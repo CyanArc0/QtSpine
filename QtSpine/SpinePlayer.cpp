@@ -229,7 +229,7 @@ QRectF SpinePlayer::get_contentRect() const
 
     auto o = contentTransform();
     if(!o) return QRectF();
-    const auto[s,t] = *o;
+    const auto[s,t] = std::move(*o);
     // spine 的 y 轴朝上，item 的 y 轴朝下：把 (minX, minY, w, h) 映射成 item 矩形
     const qreal left = +x * s.x() + t.x();
     const qreal top = -(y + h) * s.y() + t.y();
@@ -404,9 +404,9 @@ void SpinePlayer::advance()
     if(not isValid()) return;
 
     const qint64 now = times.elapsed();
-    assert(now>=0);
+    assert(now >= 0);
     float delta = (now - time) / 1000.0f;
-    assert(delta>=0);
+    assert(now >= time);
     time = now;
 
     if(delta > 1.0f/30.0f) delta = 1.0f/30.0f;

@@ -9,7 +9,7 @@
 layout(location = 0) in vec2 aPos;
 layout(location = 1) in vec2 aUV;
 layout(location = 2) in vec4 aColor;
-layout(location = 3) in vec4 aDarkColor;
+layout(location = 3) in vec4 aDarkColor;   // 未预乘的 dark tint
 
 layout(location = 0) out vec2 vUV;
 layout(location = 1) out vec4 vColor;      // 预乘后的 light tint
@@ -36,9 +36,8 @@ void main() {
     c.rgb *= c.a;
     vColor = c;
 
-    // dark tint 不预乘，只乘一次 opacity。
-    // 不要在这里再乘 vColor.a，否则片元里会把 opacity 应用两次。
+    // dark tint 与 light 一样做 alpha 预乘（c.a 已含 opacity，不要再单独乘一次）
     vec4 d = aDarkColor.bgra;
-    d.rgb *= qt_Opacity;
+    d.rgb *= c.a;
     vDarkColor = d;
 }
