@@ -29,11 +29,11 @@ protected:
     void synchronize(SpinePlayer* item); // 由 updatePaintNode() 在同步阶段调用（此时 GUI 线程被阻塞）
     void initialize(QRhiRenderTarget* rt);
 
-private:
     std::unique_ptr<QRhiGraphicsPipeline> createPipeline(QRhiRenderTarget* rt, spine::BlendMode blendMode);
     QRhiTexture* acquireTexture(QtTextureLoader::Texture* texKey, QRhiResourceUpdateBatch* rub);
     QRhiShaderResourceBindings* acquireSrb(QtTextureLoader::Texture* texKey, QRhiTexture* texture);
 
+private:
     struct FrameGroup {
         QtTextureLoader::Texture* texKey;
         spine::BlendMode blendMode;
