@@ -89,8 +89,8 @@ protected:
     virtual QSGNode* updatePaintNode(QSGNode* oldNode, UpdatePaintNodeData* updateInfo) override;
 
 private:
+    bool loadAssets(const QUrl& skeletonSource, const QUrl& atlasSource);
     void clearAssets();
-    bool loadAssets();
 
     bool isValid()const;
 

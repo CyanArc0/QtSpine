@@ -35,10 +35,10 @@ void SpinePlayer::componentComplete()
     assert(config);
     skeletonSource = std::move(config->skeletonSource);
     atlasSource = std::move(config->atlasSource);
-    loadAssets();
-    if(!config->skinName.isEmpty())
+    loadAssets(skeletonSource, atlasSource);
+    if(not config->skinName.isEmpty())
         setSkin(config->skinName);
-    if(!config->animationName.isEmpty())
+    if(not config->animationName.isEmpty())
         playAnimation(config->animationName,config->loop);
     update();
 
@@ -55,7 +55,7 @@ QUrl SpinePlayer::get_skeletonSource()const
     return skeletonSource;
 }
 
-void SpinePlayer::set_skeletonSource(const QUrl &new_skeletonSource)
+void SpinePlayer::set_skeletonSource(const QUrl& new_skeletonSource)
 {
     if(not isComponentComplete()) {
         assert(config);
@@ -77,7 +77,7 @@ QUrl SpinePlayer::get_atlasSource()const
     return atlasSource;
 }
 
-void SpinePlayer::set_atlasSource(const QUrl &new_atlasSource)
+void SpinePlayer::set_atlasSource(const QUrl& new_atlasSource)
 {
     if(not isComponentComplete()) {
         assert(config);
@@ -104,7 +104,7 @@ QString SpinePlayer::get_skinName() const
     return qspine_cast<QString>(skin->getName());
 }
 
-void SpinePlayer::set_skinName(const QString &new_skinName)
+void SpinePlayer::set_skinName(const QString& new_skinName)
 {
     if(not isComponentComplete()) {
         assert(config);
@@ -113,7 +113,7 @@ void SpinePlayer::set_skinName(const QString &new_skinName)
         return;
     }
 
-    setSkin(new_skinName);
+    assert(false);
 }
 
 QString SpinePlayer::get_animationName() const
@@ -133,7 +133,7 @@ QString SpinePlayer::get_animationName() const
     return qspine_cast<QString>(animation->getName());
 }
 
-void SpinePlayer::set_animationName(const QString &new_animationName)
+void SpinePlayer::set_animationName(const QString& new_animationName)
 {
     if(not isComponentComplete()) {
         assert(config);
@@ -216,7 +216,7 @@ QRectF SpinePlayer::get_contentRect()const
 {
     if(not isValid()) return QRectF();
 
-    auto[x,y,w,h] = [this] {
+    auto[x, y, w, h] = [this] {
         float x = 0.0f, y = 0.0f, w = 0.0f, h = 0.0f;
         spine::Vector<float> vertices;   // getBounds 的暂存缓冲
         assert(skeleton);
@@ -254,12 +254,12 @@ void SpinePlayer::setSkin(const QString& skinName)
     emit contentRectChanged();   // 换了附件，包围盒可能变
 }
 
-void SpinePlayer::playAnimation(const QString &animationName, bool loop, std::size_t trackIndex)
+void SpinePlayer::playAnimation(const QString& animationName, bool loop, std::size_t trackIndex)
 {
     setAnimation(trackIndex, animationName, loop);
 }
 
-void SpinePlayer::setAnimation(std::size_t trackIndex, const QString &animationName, bool loop)
+void SpinePlayer::setAnimation(std::size_t trackIndex, const QString& animationName, bool loop)
 {
     if(not isValid()) return;
 
@@ -308,8 +308,10 @@ void SpinePlayer::clearAssets()
     setImplicitHeight(0);
 }
 
-bool SpinePlayer::loadAssets()
+bool SpinePlayer::loadAssets(const QUrl& skeletonSource, const QUrl& atlasSource)
 {
+    if(isValid()) clearAssets();
+
     // 读取所有文件到内存
     QFile atlasFile(QQmlFile::urlToLocalFileOrQrc(atlasSource));
     if(!atlasFile.open(QIODevice::ReadOnly))[[unlikely]] {
@@ -326,13 +328,6 @@ bool SpinePlayer::loadAssets()
     }
     const QByteArray skeletonFileData = skeletonFile.readAll();
     skeletonFile.close();
-
-    // 按依赖倒序释放旧资源，接管新资源
-    animationState.reset();
-    animationStateData.reset();
-    skeleton.reset();
-    skeletonData.reset();
-    atlas.reset();
 
     // 加载骨骼数据（根据后缀自动选择 JSON 或二进制）
     const QString atlasDir = QQmlFile::urlToLocalFileOrQrc(atlasSource.adjusted(QUrl::RemoveFilename));
@@ -394,20 +389,14 @@ std::optional<std::pair<QVector2D,QVector2D>> SpinePlayer::contentTransform() co
 {
     if(not isValid()) return std::nullopt;
 
-    const float w = this->width();
-    const float h = this->height();
-    if(w <= 0.0f || h <= 0.0f) return std::nullopt;
-
     // 骨架包围盒居中于 item
-    const float anchorX = w * 0.5f;
-    const float anchorY = h * 0.5f;
-
-    const float s = 1.0f;
+    constexpr float sx = 1.0f;
+    constexpr float sy = 1.0f;
 
     assert(skeletonData);
-    const float tx = anchorX - skeletonData->getWidth() * s * 0.5f - skeletonData->getX() * s;
-    const float ty = anchorY + skeletonData->getHeight() * s * 0.5f + skeletonData->getY() * s;
-    return std::make_pair(QVector2D{1.0f,1.0f},QVector2D{tx,ty});
+    const float tx = this->width() * 0.5f - skeletonData->getWidth() * sx * 0.5f - skeletonData->getX() * sx;
+    const float ty = this->height() * 0.5f + skeletonData->getHeight() * sy * 0.5f + skeletonData->getY() * sy;
+    return std::make_pair(QVector2D{sx,sy},QVector2D{tx,ty});
 }
 
 void SpinePlayer::advance()
@@ -417,6 +406,7 @@ void SpinePlayer::advance()
     const qint64 now = times.elapsed();
     assert(now>=0);
     float delta = (now - time) / 1000.0f;
+    assert(delta>=0);
     time = now;
 
     if(delta > 1.0f/30.0f) delta = 1.0f/30.0f;
