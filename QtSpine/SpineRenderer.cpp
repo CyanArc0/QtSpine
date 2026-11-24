@@ -241,9 +241,10 @@ void SpinePlayer::SpineRenderer::releaseResources()
     m_ubo.reset();
     m_sampler.reset();
 
+    m_fingerprint = {};
+
     m_geometryState = State::Pending;
 
-    m_fingerprint = {};
     m_rhi = nullptr;
 }
 

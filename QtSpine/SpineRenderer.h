@@ -55,8 +55,9 @@ private:
     std::unique_ptr<QRhiBuffer> m_vbuf;
     std::unique_ptr<QRhiBuffer> m_ibuf;
 
-    std::unique_ptr<QRhiShaderResourceBindings> m_dummySrb;
     std::unordered_map<QtTextureLoader::Texture*, std::unique_ptr<QRhiTexture>> m_textureCache;
+
+    std::unique_ptr<QRhiShaderResourceBindings> m_dummySrb;
     std::unordered_map<QtTextureLoader::Texture*, std::unique_ptr<QRhiShaderResourceBindings>> m_srbCache;
 
     std::unique_ptr<QRhiGraphicsPipeline> m_pipelineNormal;
