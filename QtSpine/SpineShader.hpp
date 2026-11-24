@@ -5,12 +5,13 @@
 #include<rhi/qshader.h>
 #include"error_handling.hpp"
 
-namespace SpineShader
+struct SpineShader
 {
-    using namespace Qt::StringLiterals;
+private:
     // 失败时返回非法 QShader；调用方的 static 缓存保证只告警一次
-    inline QShader loadShader(const QString& path)
+    static QShader loadShader(const QString& path)
     {
+        using namespace Qt::StringLiterals;
         const QResource resource(path);
         if(!resource.isValid() || resource.size() == 0)[[unlikely]] {
             error_handling::warn(u"Spine RHI: shader resource"_s + path + u"is missing or empty; rendering disabled"_s);
@@ -26,16 +27,19 @@ namespace SpineShader
         return shader;
     }
 
+public:
     // 着色器只解析一次：pipeline 会因为 render target 变化被反复重建
-    inline const QShader& vertexShader()
+    static const QShader& vertexShader()
     {
+        using namespace Qt::StringLiterals;
         static const QShader shader = loadShader(u":/shaders/spine.vert.qsb"_s);
         return shader;
     }
 
-    inline const QShader& fragmentShader()
+    static const QShader& fragmentShader()
     {
+        using namespace Qt::StringLiterals;
         static const QShader shader = loadShader(u":/shaders/spine.frag.qsb"_s);
         return shader;
     }
-}
+};

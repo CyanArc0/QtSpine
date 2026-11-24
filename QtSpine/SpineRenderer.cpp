@@ -39,12 +39,12 @@ void SpinePlayer::SpineRenderer::prepare()
     initialize(rt);
 
     // 资源层失败：initialize 已设 failed，等环境变化或 releaseResources() 再试
-    if(m_geometryState == State::failed)
+    if(m_geometryState == State::Failed)
         return;
 
     // 内容为空（空骨架 / 尺寸退化）：这一帧不画，标记待重建
     if(!m_renderCommands) {
-        m_geometryState = State::pending;
+        m_geometryState = State::Pending;
         return;
     }
 
@@ -62,7 +62,7 @@ void SpinePlayer::SpineRenderer::prepare()
 
     // 顶点/索引/纹理只在内容真的变过（synchronize 跑过）时重建：
     // 窗口因为其它 item 重绘时，没必要把同样的几何再算一遍、再传一遍。
-    if(m_geometryState == State::pending) {
+    if(m_geometryState == State::Pending) {
         m_vertexData.clear();
         m_indexData.clear();
         m_frameGroups.clear();
@@ -136,7 +136,7 @@ void SpinePlayer::SpineRenderer::prepare()
                 if(!m_vbuf->create())[[unlikely]] {
                     error_handling::warn(u"Spine RHI: failed to create vertex buffer; rendering disabled"_s);
                     m_vbuf.reset();
-                    m_geometryState = State::failed;
+                    m_geometryState = State::Failed;
                     cb->resourceUpdate(rub);   // rub 里已有纹理/UBO 更新，先提交再退出
                     return;
                 }
@@ -149,7 +149,7 @@ void SpinePlayer::SpineRenderer::prepare()
                 if(!m_ibuf->create())[[unlikely]] {
                     error_handling::warn(u"Spine RHI: failed to create index buffer; rendering disabled"_s);
                     m_ibuf.reset();
-                    m_geometryState = State::failed;
+                    m_geometryState = State::Failed;
                     cb->resourceUpdate(rub);
                     return;
                 }
@@ -159,7 +159,7 @@ void SpinePlayer::SpineRenderer::prepare()
             rub->updateDynamicBuffer(m_ibuf.get(), 0, ibytes, m_indexData.data());
         }
 
-        m_geometryState = State::valid;
+        m_geometryState = State::Valid;
     }
 
     {
@@ -177,7 +177,7 @@ void SpinePlayer::SpineRenderer::prepare()
 
 void SpinePlayer::SpineRenderer::render(const RenderState* state)
 {
-    if(m_frameGroups.empty() or m_geometryState != State::valid or !m_renderCommands)
+    if(m_frameGroups.empty() or m_geometryState != State::Valid or !m_renderCommands)
         return;
     assert(m_pipelineNormal);
     assert(m_pipelineAdditive);
@@ -245,7 +245,7 @@ void SpinePlayer::SpineRenderer::releaseResources()
     m_ubo.reset();
     m_sampler.reset();
 
-    m_geometryState = State::pending;
+    m_geometryState = State::Pending;
 
     m_fingerprint = {};
     m_rhi = nullptr;
@@ -256,8 +256,8 @@ void SpinePlayer::SpineRenderer::synchronize(SpinePlayer* item)
     assert(item);
 
     // 内容换了一帧，prepare() 里要重建
-    if(m_geometryState == State::valid)
-        m_geometryState = State::pending;
+    if(m_geometryState == State::Valid)
+        m_geometryState = State::Pending;
 
     if(item->texturesNeedReset) {
         // 纹理换了：引用旧纹理的 SRB 必须一起清掉
@@ -301,10 +301,10 @@ void SpinePlayer::SpineRenderer::initialize(QRhiRenderTarget* rt)
 
     // 同一环境下已经失败过：不再每帧重试（否则 60Hz 刷日志），
     // 等设备 / render pass 环境变化，或 releaseResources() 之后再试。
-    if(m_geometryState == State::failed) {
+    if(m_geometryState == State::Failed) {
         if(sameFingerprint) return;
         // 环境变化：清除失败状态，允许重试
-        m_geometryState = State::pending;
+        m_geometryState = State::Pending;
     }
     m_fingerprint = fingerprint;
 
@@ -319,7 +319,7 @@ void SpinePlayer::SpineRenderer::initialize(QRhiRenderTarget* rt)
         if(!m_sampler->create())[[unlikely]] {
             error_handling::warn(u"Spine RHI: failed to create sampler; rendering disabled"_s);
             m_sampler.reset();
-            m_geometryState = State::failed;
+            m_geometryState = State::Failed;
             return;
         }
     }
@@ -331,7 +331,7 @@ void SpinePlayer::SpineRenderer::initialize(QRhiRenderTarget* rt)
         if(!m_ubo->create())[[unlikely]] {
             error_handling::warn(u"Spine RHI: failed to create uniform buffer; rendering disabled"_s);
             m_ubo.reset();
-            m_geometryState = State::failed;
+            m_geometryState = State::Failed;
             return;
         }
     }
@@ -351,7 +351,7 @@ void SpinePlayer::SpineRenderer::initialize(QRhiRenderTarget* rt)
         if(!m_dummySrb->create())[[unlikely]] {
             error_handling::warn(u"Spine RHI: failed to create shader resource bindings; rendering disabled"_s);
             m_dummySrb.reset();
-            m_geometryState = State::failed;
+            m_geometryState = State::Failed;
             return;
         }
     }
@@ -380,7 +380,7 @@ void SpinePlayer::SpineRenderer::initialize(QRhiRenderTarget* rt)
         m_pipelineNormal.reset();
         m_pipelineAdditive.reset();
         m_pipelineMultiply.reset();
-        m_geometryState = State::failed;
+        m_geometryState = State::Failed;
         return;
     }
 
