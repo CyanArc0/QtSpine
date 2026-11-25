@@ -8,6 +8,7 @@
 #include<tuple>
 #include<utility>
 #include<memory>
+#include<algorithm>
 #include"SpineVertex.h"
 #include"SpineUniforms.h"
 #include"SpineShader.hpp"
@@ -125,7 +126,7 @@ void SpinePlayer::SpineRenderer::prepare()
 
             // 容量只增不减，并按 2 倍增长，避免裁剪动画逐帧改变顶点数时反复重建缓冲
             if(!m_vbuf || m_vbuf->size() < vbytes) {
-                const uint32_t capacity = m_vbuf ? qMax(vbytes, m_vbuf->size() * 2) : vbytes;
+                const uint32_t capacity = m_vbuf ? std::max(vbytes, m_vbuf->size() * 2) : vbytes;
                 m_vbuf.reset(m_rhi->newBuffer(QRhiBuffer::Dynamic, QRhiBuffer::VertexBuffer, capacity));
                 if(!m_vbuf)[[unlikely]]
                     error_handling::panic("Spine RHI: out of memory while creating vertex buffer");
@@ -138,7 +139,7 @@ void SpinePlayer::SpineRenderer::prepare()
                 }
             }
             if(!m_ibuf || m_ibuf->size() < ibytes) {
-                const uint32_t capacity = m_ibuf ? qMax(ibytes, m_ibuf->size() * 2) : ibytes;
+                const uint32_t capacity = m_ibuf ? std::max(ibytes, m_ibuf->size() * 2) : ibytes;
                 m_ibuf.reset(m_rhi->newBuffer(QRhiBuffer::Dynamic, QRhiBuffer::IndexBuffer, capacity));
                 if(!m_ibuf)[[unlikely]]
                     error_handling::panic("Spine RHI: out of memory while creating index buffer");

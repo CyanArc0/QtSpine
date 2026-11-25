@@ -10,7 +10,11 @@
 class QtTextureLoader : public spine::TextureLoader
 {
 public:
-    using Texture = QImage;
+    //using Texture = QImage;
+    struct Texture : QImage
+    {
+        Texture(QImage image) : QImage(std::move(image)) {}
+    };
 
     virtual void load(spine::AtlasPage& page, const spine::String& path)override
     {
@@ -29,16 +33,14 @@ public:
             // 源已预乘：只重排字节序（B,G,R,A → R,G,B,A），不执行预乘
             image = image.convertToFormat(QImage::Format_RGBA8888);
             // 然后只改格式标记，像素值一字节不改
-            image = QImage(image.constBits(), image.width(), image.height(),
-                           image.bytesPerLine(),
-                           QImage::Format_RGBA8888_Premultiplied).copy();
+            image.reinterpretAsFormat(QImage::Format_RGBA8888_Premultiplied);
         } else {
             // 源非预乘：convertToFormat 会正确执行一次预乘
             image = image.convertToFormat(QImage::Format_RGBA8888_Premultiplied);
         }
 
         // Store the texture in the page
-        page.texture = new QImage(std::move(image));
+        page.texture = new Texture(std::move(image));
 
         // Set texture dimensions (required)
         page.width  = static_cast<Texture*>(page.texture)->width();
