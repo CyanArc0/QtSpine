@@ -14,14 +14,14 @@ private:
         using namespace Qt::StringLiterals;
         const QResource resource(path);
         if(!resource.isValid() || resource.size() == 0)[[unlikely]] {
-            error_handling::warn(u"Spine RHI: shader resource"_s + path + u"is missing or empty; rendering disabled"_s);
+            error_handling::warn(u"Spine RHI: shader resource "_s + path + u" is missing or empty; rendering disabled"_s);
             return QShader();
         }
 
         const QByteArray data(reinterpret_cast<const char*>(resource.data()), resource.size());
         QShader shader = QShader::fromSerialized(data);
         if(!shader.isValid())[[unlikely]] {
-            error_handling::warn(u"Spine RHI: shader"_s + path + u"is not a valid QShader; rendering disabled"_s);
+            error_handling::warn(u"Spine RHI: shader "_s + path + u" is not a valid QShader; rendering disabled"_s);
             return QShader();
         }
         return shader;
