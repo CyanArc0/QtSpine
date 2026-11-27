@@ -39,19 +39,18 @@ void SpinePlayer::SpineRenderer::prepare()
     if(m_geometryState == State::Failed)
         return;
 
-    // 内容为空（空骨架 / 尺寸退化）：这一帧不画，标记待重建
-    if(!m_renderCommands) {
-        m_geometryState = State::Pending;
-        return;
-    }
-
-    assert(m_sampler);
     assert(m_ubo);
     assert(m_dummySrb);
     assert(m_pipelineNormal);
     assert(m_pipelineAdditive);
     assert(m_pipelineMultiply);
     assert(m_pipelineScreen);
+
+    // 内容为空（空骨架 / 尺寸退化）：这一帧不画，标记待重建
+    if(!m_renderCommands) {
+        m_geometryState = State::Pending;
+        return;
+    }
 
     QRhiResourceUpdateBatch* rub = m_rhi->nextResourceUpdateBatch();
     if(!rub)[[unlikely]]
@@ -63,97 +62,106 @@ void SpinePlayer::SpineRenderer::prepare()
         m_vertexData.clear();
         m_indexData.clear();
         m_frameGroups.clear();
-        // buildGeometry：把 render command 合并成"同纹理 + 同混合模式"的批次
-        for(spine::RenderCommand* cmd = m_renderCommands; cmd;) {
-            if(cmd->numVertices == 0) { cmd = cmd->next; continue; }
+        {
+            // buildGeometry：把 render command 合并成"同纹理 + 同混合模式"的批次
+            spine::RenderCommand* cmd = m_renderCommands;
+            while(cmd) {
+                if(cmd->numVertices == 0) { cmd = cmd->next; continue; }
 
-            QtTextureLoader::Texture* texKey = static_cast<QtTextureLoader::Texture*>(cmd->texture);
-            const spine::BlendMode blend = cmd->blendMode;
+                QtTextureLoader::Texture* texKey = static_cast<QtTextureLoader::Texture*>(cmd->texture);
+                const spine::BlendMode blend = cmd->blendMode;
 
-            std::size_t groupIndices = 0;
-            spine::RenderCommand* groupEnd = cmd;
-            while(groupEnd && groupEnd->texture == texKey && groupEnd->blendMode == blend) {
-                groupIndices += groupEnd->numIndices;
-                groupEnd = groupEnd->next;
-            }
-
-            FrameGroup group {
-            .texKey      = texKey,
-            .blendMode   = blend,
-            .indexOffset = m_indexData.size(),
-            .indexCount  = groupIndices };
-
-            for(spine::RenderCommand* c = cmd; c != groupEnd; c = c->next) {
-                // 每条 command 的 indices 都是从 0 开始的局部索引，要加上顶点基址
-                const uint32_t vertexBase = m_vertexData.size();
-
-                for(int32_t i = 0; i < c->numVertices; ++i) {
-                    SpineVertex v;
-                    v.x = +c->positions[i * 2 + 0] * m_transformScale.x() + m_transformOffset.x();
-                    v.y = -c->positions[i * 2 + 1] * m_transformScale.y() + m_transformOffset.y();
-                    v.u = c->uvs[i * 2 + 0];
-                    v.v = c->uvs[i * 2 + 1];
-                    v.argb = c->colors[i];
-                    v.dark_argb = c->darkColors[i];   // SkeletonRenderer 总是分配 darkColors
-                    m_vertexData.push_back(v);
+                std::size_t groupIndices = 0;
+                spine::RenderCommand* groupEnd = cmd;
+                while(groupEnd && groupEnd->texture == texKey && groupEnd->blendMode == blend) {
+                    groupIndices += groupEnd->numIndices;
+                    groupEnd = groupEnd->next;
                 }
 
-                for(int32_t i = 0; i < c->numIndices; ++i)
-                    m_indexData.push_back(vertexBase + c->indices[i]);
-            }
+                FrameGroup group {
+                    .texKey      = texKey,
+                    .blendMode   = blend,
+                    .indexOffset = m_indexData.size(),
+                    .indexCount  = groupIndices };
 
-            m_frameGroups.push_back(group);
-            cmd = groupEnd;
+                for(spine::RenderCommand* c = cmd; c != groupEnd; c = c->next) {
+                    // 每条 command 的 indices 都是从 0 开始的局部索引，要加上顶点基址
+                    const uint32_t vertexBase = m_vertexData.size();
+
+                    for(int32_t i = 0; i < c->numVertices; ++i) {
+                        SpineVertex v;
+                        v.x = +c->positions[i * 2 + 0] * m_transformScale.x() + m_transformOffset.x();
+                        v.y = -c->positions[i * 2 + 1] * m_transformScale.y() + m_transformOffset.y();
+                        v.u = c->uvs[i * 2 + 0];
+                        v.v = c->uvs[i * 2 + 1];
+                        v.argb = c->colors[i];
+                        v.dark_argb = c->darkColors[i];   // SkeletonRenderer 总是分配 darkColors
+                        m_vertexData.push_back(v);
+                    }
+
+                    for(int32_t i = 0; i < c->numIndices; ++i)
+                        m_indexData.push_back(vertexBase + c->indices[i]);
+                }
+
+                m_frameGroups.push_back(group);
+                cmd = groupEnd;
+            }
         }
 
         if(!m_vertexData.empty()) {
-            // 纹理缺就补建：命中缓存则跳过，成本 O(numCommands)
-            for(spine::RenderCommand* c = m_renderCommands; c; c = c->next) {
-                if(c->numVertices <= 0 || !c->texture) continue;
-                auto* key = static_cast<QtTextureLoader::Texture*>(c->texture);
-                acquireTexture(key, rub);
-            }
+            {
+                // 每个唯一 texKey 只处理一次：建纹理 → 建 sampler → 建 SRB。
+                // 失败时 SRB 不建，render() 查不到自然跳过，和原行为一致。
+                std::set<QtTextureLoader::Texture*> seen;
+                for(const auto& group : m_frameGroups) {
+                    auto* texKey = group.texKey;
+                    if(!texKey || !seen.insert(texKey).second) continue;
 
-            // SRB 也在 pass 之外建好，render() 里只查表
-            for(const auto texKey : m_frameGroups | std::views::transform(&FrameGroup::texKey)) {
-                auto it = m_textureCache.find(texKey);
-                if(it == m_textureCache.end() || !it->second) continue;
-                acquireSrb(texKey, it->second.get());
-            }
+                    QRhiTexture* texture = acquireTexture(texKey, rub);
+                    if(!texture) continue;
 
-            const uint32_t vbytes = m_vertexData.size() * sizeof(SpineVertex);
-            const uint32_t ibytes = m_indexData.size() * sizeof(uint32_t);
+                    QRhiSampler* sampler = acquireSampler(texKey->samplerState);
+                    if(!sampler) continue;
 
-            // 容量只增不减，并按 2 倍增长，避免裁剪动画逐帧改变顶点数时反复重建缓冲
-            if(!m_vbuf || m_vbuf->size() < vbytes) {
-                const uint32_t capacity = m_vbuf ? std::max(vbytes, m_vbuf->size() * 2) : vbytes;
-                m_vbuf.reset(m_rhi->newBuffer(QRhiBuffer::Dynamic, QRhiBuffer::VertexBuffer, capacity));
-                if(!m_vbuf)[[unlikely]]
-                    error_handling::panic("Spine RHI: out of memory while creating vertex buffer");
-                if(!m_vbuf->create())[[unlikely]] {
-                    error_handling::warn(u"Spine RHI: failed to create vertex buffer; rendering disabled"_s);
-                    m_vbuf.reset();
-                    m_geometryState = State::Failed;
-                    cb->resourceUpdate(rub);   // rub 里已有纹理/UBO 更新，先提交再退出
-                    return;
-                }
-            }
-            if(!m_ibuf || m_ibuf->size() < ibytes) {
-                const uint32_t capacity = m_ibuf ? std::max(ibytes, m_ibuf->size() * 2) : ibytes;
-                m_ibuf.reset(m_rhi->newBuffer(QRhiBuffer::Dynamic, QRhiBuffer::IndexBuffer, capacity));
-                if(!m_ibuf)[[unlikely]]
-                    error_handling::panic("Spine RHI: out of memory while creating index buffer");
-                if(!m_ibuf->create())[[unlikely]] {
-                    error_handling::warn(u"Spine RHI: failed to create index buffer; rendering disabled"_s);
-                    m_ibuf.reset();
-                    m_geometryState = State::Failed;
-                    cb->resourceUpdate(rub);
-                    return;
+                    acquireSrb(texKey, texture, sampler);
                 }
             }
 
-            rub->updateDynamicBuffer(m_vbuf.get(), 0, vbytes, m_vertexData.data());
-            rub->updateDynamicBuffer(m_ibuf.get(), 0, ibytes, m_indexData.data());
+            {
+                const uint32_t vbytes = m_vertexData.size() * sizeof(SpineVertex);
+                const uint32_t ibytes = m_indexData.size() * sizeof(uint32_t);
+
+                // 容量只增不减，并按 2 倍增长，避免裁剪动画逐帧改变顶点数时反复重建缓冲
+                if(!m_vbuf || m_vbuf->size() < vbytes) {
+                    const uint32_t capacity = m_vbuf ? std::max(vbytes, m_vbuf->size() * 2) : vbytes;
+                    m_vbuf.reset(m_rhi->newBuffer(QRhiBuffer::Dynamic, QRhiBuffer::VertexBuffer, capacity));
+                    if(!m_vbuf)[[unlikely]]
+                        error_handling::panic("Spine RHI: out of memory while creating vertex buffer");
+                    if(!m_vbuf->create())[[unlikely]] {
+                        error_handling::warn(u"Spine RHI: failed to create vertex buffer; rendering disabled"_s);
+                        m_vbuf.reset();
+                        m_geometryState = State::Failed;
+                        cb->resourceUpdate(rub);   // rub 里已有纹理/UBO 更新，先提交再退出
+                        return;
+                    }
+                }
+                if(!m_ibuf || m_ibuf->size() < ibytes) {
+                    const uint32_t capacity = m_ibuf ? std::max(ibytes, m_ibuf->size() * 2) : ibytes;
+                    m_ibuf.reset(m_rhi->newBuffer(QRhiBuffer::Dynamic, QRhiBuffer::IndexBuffer, capacity));
+                    if(!m_ibuf)[[unlikely]]
+                        error_handling::panic("Spine RHI: out of memory while creating index buffer");
+                    if(!m_ibuf->create())[[unlikely]] {
+                        error_handling::warn(u"Spine RHI: failed to create index buffer; rendering disabled"_s);
+                        m_ibuf.reset();
+                        m_geometryState = State::Failed;
+                        cb->resourceUpdate(rub);
+                        return;
+                    }
+                }
+
+                rub->updateDynamicBuffer(m_vbuf.get(), 0, vbytes, m_vertexData.data());
+                rub->updateDynamicBuffer(m_ibuf.get(), 0, ibytes, m_indexData.data());
+            }
         }
 
         m_geometryState = State::Valid;
@@ -205,7 +213,7 @@ void SpinePlayer::SpineRenderer::render(const RenderState* state)
     for(const auto &[texKey, blendMode, indexOffset, indexCount] : m_frameGroups) {
         QRhiGraphicsPipeline* pipeline = nullptr;
         switch(blendMode) {
-        default:[[fallthrough]];
+        default:
         case spine::BlendMode_Normal:   pipeline = m_pipelineNormal.get();   break;
         case spine::BlendMode_Additive: pipeline = m_pipelineAdditive.get(); break;
         case spine::BlendMode_Multiply: pipeline = m_pipelineMultiply.get(); break;
@@ -231,16 +239,16 @@ void SpinePlayer::SpineRenderer::releaseResources()
     m_pipelineAdditive.reset();
     m_pipelineNormal.reset();
 
-    m_srbCache.clear();
+    m_srbCache.clear();   // 先清 SRB：它们持有纹理与 sampler 的裸指针
     m_dummySrb.reset();
 
     m_textureCache.clear();
+    m_samplerCache.clear();
 
     m_ibuf.reset();
     m_vbuf.reset();
 
     m_ubo.reset();
-    m_sampler.reset();
 
     m_geometryState = State::Pending;
     m_fingerprint = {};
@@ -256,7 +264,8 @@ void SpinePlayer::SpineRenderer::synchronize(SpinePlayer* item)
         m_geometryState = State::Pending;
 
     if(item->texturesNeedReset) {
-        // 纹理换了：引用旧纹理的 SRB 必须一起清掉
+        // 纹理换了：引用旧纹理的 SRB 必须一起清掉；
+        // sampler 只跟 filter / wrap 有关，与纹理无关，可以继续复用
         m_srbCache.clear();
         m_textureCache.clear();
         item->texturesNeedReset = false;
@@ -273,7 +282,7 @@ void SpinePlayer::SpineRenderer::synchronize(SpinePlayer* item)
     // 骨架坐标 → item 局部坐标的变换与 contentRect 共用，避免两处算法分叉
     auto result = item->contentTransform();
     if(!result) {
-        m_renderCommands = nullptr;   // 尺寸退化
+        m_renderCommands = nullptr;
         return;
     }
     std::tie(m_transformScale,m_transformOffset) = std::move(*result);
@@ -281,9 +290,10 @@ void SpinePlayer::SpineRenderer::synchronize(SpinePlayer* item)
 
 void SpinePlayer::SpineRenderer::initialize(QRhiRenderTarget* rt)
 {
+    assert(rt);
     QRhi* rhi = rt->rhi();
-    QRhiRenderPassDescriptor* rpd = rt->renderPassDescriptor();
     assert(rhi);
+    QRhiRenderPassDescriptor* rpd = rt->renderPassDescriptor();
     assert(rpd);
 
     if(m_rhi != rhi) {
@@ -292,7 +302,7 @@ void SpinePlayer::SpineRenderer::initialize(QRhiRenderTarget* rt)
         m_rhi = rhi;
     }
 
-    Fingerprint fingerprint = {rt->sampleCount(),rpd->serializedFormat()};
+    Fingerprint fingerprint = {rt->sampleCount(), rpd->serializedFormat()};
     const bool sameFingerprint = m_fingerprint == fingerprint;
 
     // 同一环境下已经失败过：不再每帧重试（否则 60Hz 刷日志），
@@ -304,21 +314,9 @@ void SpinePlayer::SpineRenderer::initialize(QRhiRenderTarget* rt)
     }
     m_fingerprint = fingerprint;
 
-    // ── sampler / UBO / dummy SRB 与 render target 无关，只在缺失时补建 ──
+    // ── UBO / dummy SRB 与 render target 无关，只在缺失时补建 ──
+    // sampler 与 atlas 页的 filter / wrap 绑定，由 acquireSampler() 按需创建。
     // 创建失败不终止进程：告警一次，本 item 空渲染，环境变化后再试。
-    if(!m_sampler) {
-        m_sampler.reset(m_rhi->newSampler(
-            QRhiSampler::Linear, QRhiSampler::Linear, QRhiSampler::Linear,
-            QRhiSampler::ClampToEdge, QRhiSampler::ClampToEdge, QRhiSampler::ClampToEdge));
-        if(!m_sampler)[[unlikely]]
-            error_handling::panic("Spine RHI: out of memory while creating sampler");
-        if(!m_sampler->create())[[unlikely]] {
-            error_handling::warn(u"Spine RHI: failed to create sampler; rendering disabled"_s);
-            m_sampler.reset();
-            m_geometryState = State::Failed;
-            return;
-        }
-    }
 
     if(!m_ubo) {
         m_ubo.reset(m_rhi->newBuffer(QRhiBuffer::Dynamic, QRhiBuffer::UniformBuffer, sizeof(SpineUniforms)));
@@ -335,7 +333,7 @@ void SpinePlayer::SpineRenderer::initialize(QRhiRenderTarget* rt)
     if(!m_dummySrb) {
         // 只是给 pipeline 提供布局，绑定的资源无所谓（见 qrhi.cpp 中
         // QRhiGraphicsPipeline::setShaderResourceBindings 的说明），
-        // 真正绘制时换成 getOrCreateSrb() 建的那份。
+        // 真正绘制时换成 acquireSrb() 建的那份。
         m_dummySrb.reset(m_rhi->newShaderResourceBindings());
         if(!m_dummySrb)[[unlikely]]
             error_handling::panic("Spine RHI: out of memory while creating shader resource bindings");
@@ -365,21 +363,25 @@ void SpinePlayer::SpineRenderer::initialize(QRhiRenderTarget* rt)
     // 链式创建：任何一条失败就停手，四条全部作废。
     // render() 只以 m_pipelineNormal 判断"能不能画"，不存在半残状态。
     m_pipelineNormal = createPipeline(rt, spine::BlendMode_Normal);
-    if(m_pipelineNormal)
-        m_pipelineAdditive = createPipeline(rt, spine::BlendMode_Additive);
-    if(m_pipelineAdditive)
-        m_pipelineMultiply = createPipeline(rt, spine::BlendMode_Multiply);
-    if(m_pipelineMultiply)
-        m_pipelineScreen = createPipeline(rt, spine::BlendMode_Screen);
+    if(!m_pipelineNormal)[[unlikely]] goto pipeline_create_failed;
+    m_pipelineAdditive = createPipeline(rt, spine::BlendMode_Additive);
+    if(!m_pipelineAdditive)[[unlikely]] goto pipeline_create_failed;
+    m_pipelineMultiply = createPipeline(rt, spine::BlendMode_Multiply);
+    if(!m_pipelineMultiply)[[unlikely]] goto pipeline_create_failed;
+    m_pipelineScreen = createPipeline(rt, spine::BlendMode_Screen);
+    if(!m_pipelineScreen)[[unlikely]] goto pipeline_create_failed;
 
-    if(!m_pipelineScreen) {
-        m_pipelineNormal.reset();
-        m_pipelineAdditive.reset();
+    return;
+
+    {
+    pipeline_create_failed:
+        m_pipelineScreen.reset();
         m_pipelineMultiply.reset();
+        m_pipelineAdditive.reset();
+        m_pipelineNormal.reset();
         m_geometryState = State::Failed;
         return;
     }
-
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -389,13 +391,13 @@ void SpinePlayer::SpineRenderer::initialize(QRhiRenderTarget* rt)
 std::unique_ptr<QRhiGraphicsPipeline> SpinePlayer::SpineRenderer::createPipeline(QRhiRenderTarget* rt, spine::BlendMode blendMode)
 {
     assert(rt);
-    assert(rt->renderPassDescriptor());
+    assert(blendMode==spine::BlendMode_Normal or blendMode==spine::BlendMode_Additive or blendMode==spine::BlendMode_Multiply or blendMode==spine::BlendMode_Screen);
     assert(m_rhi);
     assert(m_dummySrb);
 
     const QShader &vs = SpineShader::vertexShader();
     const QShader &fs = SpineShader::fragmentShader();
-    if(!vs.isValid() || !fs.isValid())
+    if(!vs.isValid() || !fs.isValid())[[unlikely]]
         return nullptr;   // 加载着色器时已经告警过
 
     auto pipeline = std::unique_ptr<QRhiGraphicsPipeline>(m_rhi->newGraphicsPipeline());
@@ -428,7 +430,6 @@ std::unique_ptr<QRhiGraphicsPipeline> SpinePlayer::SpineRenderer::createPipeline
     QRhiGraphicsPipeline::TargetBlend blend;
     blend.enable = true;
     switch(blendMode) {
-    default:[[fallthrough]];
     case spine::BlendMode_Normal:
         blend.srcColor = QRhiGraphicsPipeline::One;
         blend.dstColor = QRhiGraphicsPipeline::OneMinusSrcAlpha;
@@ -468,6 +469,90 @@ std::unique_ptr<QRhiGraphicsPipeline> SpinePlayer::SpineRenderer::createPipeline
 }
 
 // ─────────────────────────────────────────────────────────────
+// atlas 的 filter / wrap → QRhi。spine 的枚举名沿用 GL 语义：
+//   minFilter 同时决定 minification 与 mipmap 级别（MipMapLinearLinear 即
+//   GL_LINEAR_MIPMAP_LINEAR），magFilter 只区分 Nearest / Linear。
+// ─────────────────────────────────────────────────────────────
+
+namespace {
+    QRhiSampler::AddressMode toAddressMode(spine::TextureWrap wrap)
+    {
+        switch(wrap) {
+        case spine::TextureWrap_Repeat:         return QRhiSampler::Repeat;
+        case spine::TextureWrap_MirroredRepeat: return QRhiSampler::Mirror;
+        default:                                return QRhiSampler::ClampToEdge;
+        }
+    }
+
+    QRhiSampler::Filter toMinFilter(spine::TextureFilter filter)
+    {
+        switch(filter) {
+        case spine::TextureFilter_Nearest:
+        case spine::TextureFilter_MipMapNearestNearest:
+        case spine::TextureFilter_MipMapNearestLinear:
+            return QRhiSampler::Nearest;
+        default:
+            return QRhiSampler::Linear;   // Linear / MipMap* / Unknown
+        }
+    }
+
+    QRhiSampler::Filter toMagFilter(spine::TextureFilter filter)
+    {
+        return filter == spine::TextureFilter_Nearest ? QRhiSampler::Nearest : QRhiSampler::Linear;
+    }
+
+    // None = 不采样 mipmap，纹理也不必分配 mip 链
+    QRhiSampler::Filter toMipmapMode(spine::TextureFilter filter)
+    {
+        switch(filter) {
+        case spine::TextureFilter_MipMapNearestNearest:
+        case spine::TextureFilter_MipMapLinearNearest:
+            return QRhiSampler::Nearest;
+        case spine::TextureFilter_MipMap:
+        case spine::TextureFilter_MipMapNearestLinear:
+        case spine::TextureFilter_MipMapLinearLinear:
+            return QRhiSampler::Linear;
+        default:
+            return QRhiSampler::None;
+        }
+    }
+
+    bool needsMipmaps(spine::TextureFilter minFilter)
+    {
+        return toMipmapMode(minFilter) != QRhiSampler::None;
+    }
+}
+
+QRhiSampler* SpinePlayer::SpineRenderer::acquireSampler(QtTextureLoader::Texture::SamplerState samplerState)
+{
+    assert(m_rhi);
+
+    // 同 filter / wrap 的页共用一份 sampler；失败也记一笔，避免每帧重试
+    if(auto it = m_samplerCache.find(samplerState); it != m_samplerCache.end())
+        return it->second.get();   // 可能为 nullptr：上次就失败了
+
+    // 注意 newSampler() 的参数顺序是 (mag, min, mipmap)，不是 (min, mag, ...)
+    auto sampler = std::unique_ptr<QRhiSampler>(m_rhi->newSampler(
+        toMagFilter(samplerState.magFilter),
+        toMinFilter(samplerState.minFilter),
+        toMipmapMode(samplerState.minFilter),
+        toAddressMode(samplerState.uWrap),
+        toAddressMode(samplerState.vWrap)));
+    if(!sampler)[[unlikely]]
+        error_handling::panic("Spine RHI: out of memory while creating sampler");
+
+    if(!sampler->create())[[unlikely]] {
+        error_handling::warn(u"Spine RHI: failed to create sampler; the batch referencing it is skipped"_s);
+        m_samplerCache.emplace(samplerState, std::unique_ptr<QRhiSampler>());
+        return nullptr;
+    }
+
+    QRhiSampler* result = sampler.get();
+    m_samplerCache.emplace(samplerState, std::move(sampler));
+    return result;
+}
+
+// ─────────────────────────────────────────────────────────────
 // 纹理：指针由 m_textureCache 持有；失败时缓存 nullptr，避免每帧重试
 // ─────────────────────────────────────────────────────────────
 
@@ -486,8 +571,12 @@ QRhiTexture* SpinePlayer::SpineRenderer::acquireTexture(QtTextureLoader::Texture
         return nullptr;
     }
 
-    QRhiTexture* texture = m_rhi->newTexture(QRhiTexture::RGBA8, texKey->size(), 1,
-        QRhiTexture::MipMapped | QRhiTexture::UsedWithGenerateMips);
+    // mip 链只在 min filter 需要 mipmap 时才分配：像素画（Nearest）既用不到，也省显存
+    const bool mipmapped = needsMipmaps(texKey->samplerState.minFilter);
+    const QRhiTexture::Flags textureFlags = mipmapped
+        ? QRhiTexture::Flags(QRhiTexture::MipMapped | QRhiTexture::UsedWithGenerateMips)
+        : QRhiTexture::Flags();
+    QRhiTexture* texture = m_rhi->newTexture(QRhiTexture::RGBA8, texKey->size(), 1, textureFlags);
     if(!texture)[[unlikely]]
         error_handling::panic("Spine RHI: out of memory while creating texture");
 
@@ -499,7 +588,8 @@ QRhiTexture* SpinePlayer::SpineRenderer::acquireTexture(QtTextureLoader::Texture
     }
 
     rub->uploadTexture(texture, *texKey);
-    rub->generateMips(texture);
+    if(mipmapped)
+        rub->generateMips(texture);
 
     m_textureCache.emplace(texKey, std::unique_ptr<QRhiTexture>(texture));
     return texture;
@@ -509,12 +599,12 @@ QRhiTexture* SpinePlayer::SpineRenderer::acquireTexture(QtTextureLoader::Texture
 // SRB：指针由 m_srbCache 持有；失败时缓存 nullptr，避免每帧重试
 // ─────────────────────────────────────────────────────────────
 
-QRhiShaderResourceBindings* SpinePlayer::SpineRenderer::acquireSrb(QtTextureLoader::Texture* texKey, QRhiTexture* texture)
+QRhiShaderResourceBindings* SpinePlayer::SpineRenderer::acquireSrb(QtTextureLoader::Texture* texKey, QRhiTexture* texture, QRhiSampler* sampler)
 {
     assert(texKey);
     assert(texture);
+    assert(sampler);
     assert(m_ubo);
-    assert(m_sampler);
 
     if(auto it = m_srbCache.find(texKey); it != m_srbCache.end())
         return it->second.get();   // 可能为 nullptr：上次就失败了
@@ -525,7 +615,7 @@ QRhiShaderResourceBindings* SpinePlayer::SpineRenderer::acquireSrb(QtTextureLoad
 
     srb->setBindings({
         QRhiShaderResourceBinding::uniformBuffer(0, QRhiShaderResourceBinding::VertexStage | QRhiShaderResourceBinding::FragmentStage, m_ubo.get()),
-        QRhiShaderResourceBinding::sampledTexture(1, QRhiShaderResourceBinding::FragmentStage, texture, m_sampler.get())
+        QRhiShaderResourceBinding::sampledTexture(1, QRhiShaderResourceBinding::FragmentStage, texture, sampler)
     });
     if(!srb->create())[[unlikely]] {
         error_handling::warn(u"Spine RHI: failed to create shader resource bindings; the batch referencing it is skipped"_s);

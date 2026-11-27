@@ -10,10 +10,18 @@
 class QtTextureLoader : public spine::TextureLoader
 {
 public:
-    //using Texture = QImage;
     struct Texture : QImage
     {
-        Texture(QImage image) : QImage(std::move(image)) {}
+        struct SamplerState {
+            spine::TextureFilter minFilter = spine::TextureFilter_Linear;
+            spine::TextureFilter magFilter = spine::TextureFilter_Linear;
+            spine::TextureWrap uWrap = spine::TextureWrap_ClampToEdge;
+            spine::TextureWrap vWrap = spine::TextureWrap_ClampToEdge;
+            friend auto operator<=>(SamplerState,SamplerState) = default;
+        };
+        SamplerState samplerState;
+        explicit Texture(QImage image) : QImage(std::move(image)) {}
+        Texture(QImage image, SamplerState state) : QImage(std::move(image)), samplerState(state) {}
     };
 
     virtual void load(spine::AtlasPage& page, const spine::String& path)override
@@ -40,11 +48,16 @@ public:
         }
 
         // Store the texture in the page
-        page.texture = new Texture(std::move(image));
+        Texture* texture = new Texture(std::move(image));
+        texture->samplerState.minFilter = page.minFilter;
+        texture->samplerState.magFilter = page.magFilter;
+        texture->samplerState.uWrap = page.uWrap;
+        texture->samplerState.vWrap = page.vWrap;
+        page.texture = texture;
 
         // Set texture dimensions (required)
-        page.width  = static_cast<Texture*>(page.texture)->width();
-        page.height = static_cast<Texture*>(page.texture)->height();
+        page.width  = texture->width();
+        page.height = texture->height();
     }
 
     virtual void unload(void* texture)override

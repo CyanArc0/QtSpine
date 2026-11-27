@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.18)
 
-project(QtSpine VERSION 2.1 LANGUAGES CXX)
+project(QtSpine VERSION 2.2 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -48,8 +48,8 @@ qt_add_resources(QtSpineExample "resources"
 set_target_properties(QtSpineExample PROPERTIES
     WIN32_EXECUTABLE TRUE
     QT_ANDROID_PACKAGE_NAME "CyanArc.QtSpineExample"
-    QT_ANDROID_VERSION_CODE 4
-    QT_ANDROID_VERSION_NAME "2.1"
+    QT_ANDROID_VERSION_CODE 5
+    QT_ANDROID_VERSION_NAME "2.2"
 )
 
 target_link_libraries(QtSpineExample

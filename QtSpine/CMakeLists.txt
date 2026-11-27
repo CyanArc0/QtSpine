@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.18)
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-    project(QtSpine VERSION 2.1 LANGUAGES CXX)
+    project(QtSpine VERSION 2.2 LANGUAGES CXX)
 endif()
 
 find_package(Qt6 REQUIRED COMPONENTS Quick Gui GuiPrivate ShaderTools)
@@ -30,7 +30,7 @@ target_compile_features(QtSpine PUBLIC cxx_std_20)
 
 qt_add_qml_module(QtSpine
     URI QtSpine
-    VERSION 2.1
+    VERSION 2.2
     SOURCES
         SpinePlayer.h
         SpinePlayer.cpp

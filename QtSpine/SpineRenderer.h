@@ -4,7 +4,7 @@
 #include<QVector2D>
 #include<QVector>
 #include<memory>
-#include<unordered_map>
+#include<map>
 #include<vector>
 #include<cstddef>
 #include<cstdint>
@@ -30,8 +30,9 @@ protected:
     void initialize(QRhiRenderTarget* rt);
 
     std::unique_ptr<QRhiGraphicsPipeline> createPipeline(QRhiRenderTarget* rt, spine::BlendMode blendMode);
+    QRhiSampler* acquireSampler(QtTextureLoader::Texture::SamplerState samplerState);
     QRhiTexture* acquireTexture(QtTextureLoader::Texture* texKey, QRhiResourceUpdateBatch* rub);
-    QRhiShaderResourceBindings* acquireSrb(QtTextureLoader::Texture* texKey, QRhiTexture* texture);
+    QRhiShaderResourceBindings* acquireSrb(QtTextureLoader::Texture* texKey, QRhiTexture* texture, QRhiSampler* sampler);
 
 private:
     struct FrameGroup {
@@ -47,16 +48,16 @@ private:
     Fingerprint m_fingerprint;
     State m_geometryState = State::Pending;
 
-    std::unique_ptr<QRhiSampler> m_sampler;
     std::unique_ptr<QRhiBuffer> m_ubo;
 
     std::unique_ptr<QRhiBuffer> m_vbuf;
     std::unique_ptr<QRhiBuffer> m_ibuf;
 
-    std::unordered_map<QtTextureLoader::Texture*, std::unique_ptr<QRhiTexture>> m_textureCache;
+    std::map<QtTextureLoader::Texture::SamplerState, std::unique_ptr<QRhiSampler>> m_samplerCache;
+    std::map<QtTextureLoader::Texture*, std::unique_ptr<QRhiTexture>> m_textureCache;
 
     std::unique_ptr<QRhiShaderResourceBindings> m_dummySrb;
-    std::unordered_map<QtTextureLoader::Texture*, std::unique_ptr<QRhiShaderResourceBindings>> m_srbCache;
+    std::map<QtTextureLoader::Texture*, std::unique_ptr<QRhiShaderResourceBindings>> m_srbCache;
 
     std::unique_ptr<QRhiGraphicsPipeline> m_pipelineNormal;
     std::unique_ptr<QRhiGraphicsPipeline> m_pipelineAdditive;
