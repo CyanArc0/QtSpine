@@ -39,6 +39,7 @@ qt_add_qml_module(QtSpine
         SpineVertex.h
         SpineUniforms.h
         SpineShader.hpp
+        SpineSampler.hpp
 )
 
 # 编译着色器为 .qsb

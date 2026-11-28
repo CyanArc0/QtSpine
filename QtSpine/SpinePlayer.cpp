@@ -9,7 +9,6 @@
 #include<span>
 #include<tuple>
 #include<memory>
-#include<optional>
 #include<utility>
 #include"qspine_cast.hpp"
 #include"error_handling.hpp"
@@ -227,9 +226,7 @@ QRectF SpinePlayer::get_contentRect() const
     if(!std::isfinite(w) || !std::isfinite(h) || w < 0.0f || h < 0.0f)
         return QRectF();
 
-    auto o = contentTransform();
-    if(!o) return QRectF();
-    const auto[s,t] = std::move(*o);
+    const auto[s,t] = contentTransform();
     // spine 的 y 轴朝上，item 的 y 轴朝下：把 (minX, minY, w, h) 映射成 item 矩形
     const qreal left = +x * s.x() + t.x();
     const qreal top = -(y + h) * s.y() + t.y();
@@ -385,9 +382,9 @@ bool SpinePlayer::isValid() const
     else return false;
 }
 
-std::optional<std::pair<QVector2D,QVector2D>> SpinePlayer::contentTransform() const
+std::pair<QVector2D,QVector2D> SpinePlayer::contentTransform() const
 {
-    if(not isValid()) return std::nullopt;
+    assert(isValid());
 
     // 骨架包围盒居中于 item
     constexpr float sx = 1.0f;

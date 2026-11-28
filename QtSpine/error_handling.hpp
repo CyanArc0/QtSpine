@@ -5,6 +5,7 @@
 #include<cstdio>
 #include<cassert>
 
+//#define ASSERT(...) assert((__VA_ARGS__))
 namespace error_handling
 {
     inline void warn(const QString& s)

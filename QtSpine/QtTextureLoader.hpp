@@ -38,7 +38,7 @@ public:
 
         // ✅ 根据 AtlasPage::pma 决定是否预乘，仅在这里做一次
         if(page.pma) {
-            // 源已预乘：只重排字节序（B,G,R,A → R,G,B,A），不执行预乘
+            // 源已预乘：只重排字节序，不执行预乘
             image = image.convertToFormat(QImage::Format_RGBA8888);
             // 然后只改格式标记，像素值一字节不改
             image.reinterpretAsFormat(QImage::Format_RGBA8888_Premultiplied);

@@ -1,7 +1,6 @@
 #include"SpineRenderer.h"
 #include<QByteArray>
 #include<QMatrix4x4>
-#include<ranges>
 #include<cstring>
 #include<cstddef>
 #include<cstdint>
@@ -9,9 +8,11 @@
 #include<utility>
 #include<memory>
 #include<algorithm>
+#include<set>
 #include"SpineVertex.h"
 #include"SpineUniforms.h"
 #include"SpineShader.hpp"
+#include"SpineSampler.hpp"
 #include"error_handling.hpp"
 
 using namespace Qt::StringLiterals;
@@ -199,9 +200,10 @@ void SpinePlayer::SpineRenderer::render(const RenderState* state)
     // 场景图会把祖先/item 的裁剪结果通过 state 传进来，没有裁剪时就是整个 render target。
     // 坐标约定两边一致（x/y 为左下角、设备像素），直接透传。
     QRhiScissor scissor;
-    const QRect clipRect = state->scissorRect();
-    if(state->scissorEnabled() && clipRect.isValid()) {
-        scissor = QRhiScissor(clipRect.x(), clipRect.y(), clipRect.width(), clipRect.height());
+    if(state->scissorEnabled()) {
+        const QRect r = state->scissorRect();
+        if(r.isEmpty()) return;              // 完全被裁掉：这一帧什么都不画
+        scissor = QRhiScissor(r.x(), r.y(), r.width(), r.height());
     } else {
         const QSize rtSize = renderTarget()->pixelSize();
         scissor = QRhiScissor(0, 0, rtSize.width(), rtSize.height());
@@ -221,7 +223,7 @@ void SpinePlayer::SpineRenderer::render(const RenderState* state)
         }
 
         auto it = m_srbCache.find(texKey);
-        if(it == m_srbCache.end() || !it->second) continue;   // 纹理缺失
+        if(it == m_srbCache.end() or !it->second) continue;   // 纹理缺失
 
         cb->setGraphicsPipeline(pipeline);
         cb->setScissor(scissor);   // 必须在绑定带 UsesScissor 的 pipeline 之后
@@ -280,12 +282,7 @@ void SpinePlayer::SpineRenderer::synchronize(SpinePlayer* item)
     if(!m_renderCommands) return;     // 空骨架（没有可画槽位）
 
     // 骨架坐标 → item 局部坐标的变换与 contentRect 共用，避免两处算法分叉
-    auto result = item->contentTransform();
-    if(!result) {
-        m_renderCommands = nullptr;
-        return;
-    }
-    std::tie(m_transformScale,m_transformOffset) = std::move(*result);
+    std::tie(m_transformScale,m_transformOffset) = item->contentTransform();
 }
 
 void SpinePlayer::SpineRenderer::initialize(QRhiRenderTarget* rt)
@@ -317,7 +314,6 @@ void SpinePlayer::SpineRenderer::initialize(QRhiRenderTarget* rt)
     // ── UBO / dummy SRB 与 render target 无关，只在缺失时补建 ──
     // sampler 与 atlas 页的 filter / wrap 绑定，由 acquireSampler() 按需创建。
     // 创建失败不终止进程：告警一次，本 item 空渲染，环境变化后再试。
-
     if(!m_ubo) {
         m_ubo.reset(m_rhi->newBuffer(QRhiBuffer::Dynamic, QRhiBuffer::UniformBuffer, sizeof(SpineUniforms)));
         if(!m_ubo)[[unlikely]]
@@ -468,61 +464,6 @@ std::unique_ptr<QRhiGraphicsPipeline> SpinePlayer::SpineRenderer::createPipeline
     return pipeline;
 }
 
-// ─────────────────────────────────────────────────────────────
-// atlas 的 filter / wrap → QRhi。spine 的枚举名沿用 GL 语义：
-//   minFilter 同时决定 minification 与 mipmap 级别（MipMapLinearLinear 即
-//   GL_LINEAR_MIPMAP_LINEAR），magFilter 只区分 Nearest / Linear。
-// ─────────────────────────────────────────────────────────────
-
-namespace {
-    QRhiSampler::AddressMode toAddressMode(spine::TextureWrap wrap)
-    {
-        switch(wrap) {
-        case spine::TextureWrap_Repeat:         return QRhiSampler::Repeat;
-        case spine::TextureWrap_MirroredRepeat: return QRhiSampler::Mirror;
-        default:                                return QRhiSampler::ClampToEdge;
-        }
-    }
-
-    QRhiSampler::Filter toMinFilter(spine::TextureFilter filter)
-    {
-        switch(filter) {
-        case spine::TextureFilter_Nearest:
-        case spine::TextureFilter_MipMapNearestNearest:
-        case spine::TextureFilter_MipMapNearestLinear:
-            return QRhiSampler::Nearest;
-        default:
-            return QRhiSampler::Linear;   // Linear / MipMap* / Unknown
-        }
-    }
-
-    QRhiSampler::Filter toMagFilter(spine::TextureFilter filter)
-    {
-        return filter == spine::TextureFilter_Nearest ? QRhiSampler::Nearest : QRhiSampler::Linear;
-    }
-
-    // None = 不采样 mipmap，纹理也不必分配 mip 链
-    QRhiSampler::Filter toMipmapMode(spine::TextureFilter filter)
-    {
-        switch(filter) {
-        case spine::TextureFilter_MipMapNearestNearest:
-        case spine::TextureFilter_MipMapLinearNearest:
-            return QRhiSampler::Nearest;
-        case spine::TextureFilter_MipMap:
-        case spine::TextureFilter_MipMapNearestLinear:
-        case spine::TextureFilter_MipMapLinearLinear:
-            return QRhiSampler::Linear;
-        default:
-            return QRhiSampler::None;
-        }
-    }
-
-    bool needsMipmaps(spine::TextureFilter minFilter)
-    {
-        return toMipmapMode(minFilter) != QRhiSampler::None;
-    }
-}
-
 QRhiSampler* SpinePlayer::SpineRenderer::acquireSampler(QtTextureLoader::Texture::SamplerState samplerState)
 {
     assert(m_rhi);
@@ -533,11 +474,11 @@ QRhiSampler* SpinePlayer::SpineRenderer::acquireSampler(QtTextureLoader::Texture
 
     // 注意 newSampler() 的参数顺序是 (mag, min, mipmap)，不是 (min, mag, ...)
     auto sampler = std::unique_ptr<QRhiSampler>(m_rhi->newSampler(
-        toMagFilter(samplerState.magFilter),
-        toMinFilter(samplerState.minFilter),
-        toMipmapMode(samplerState.minFilter),
-        toAddressMode(samplerState.uWrap),
-        toAddressMode(samplerState.vWrap)));
+        SpineSampler::toMagFilter(samplerState.magFilter),
+        SpineSampler::toMinFilter(samplerState.minFilter),
+        SpineSampler::toMipmapMode(samplerState.minFilter),
+        SpineSampler::toAddressMode(samplerState.uWrap),
+        SpineSampler::toAddressMode(samplerState.vWrap) ));
     if(!sampler)[[unlikely]]
         error_handling::panic("Spine RHI: out of memory while creating sampler");
 
@@ -572,7 +513,7 @@ QRhiTexture* SpinePlayer::SpineRenderer::acquireTexture(QtTextureLoader::Texture
     }
 
     // mip 链只在 min filter 需要 mipmap 时才分配：像素画（Nearest）既用不到，也省显存
-    const bool mipmapped = needsMipmaps(texKey->samplerState.minFilter);
+    const bool mipmapped = toMipmapMode(texKey->samplerState.minFilter) != QRhiSampler::None;
     const QRhiTexture::Flags textureFlags = mipmapped
         ? QRhiTexture::Flags(QRhiTexture::MipMapped | QRhiTexture::UsedWithGenerateMips)
         : QRhiTexture::Flags();

@@ -10,7 +10,6 @@
 #include<memory>
 #include<cstddef>
 #include<cstdint>
-#include<optional>
 #include<utility>
 #include<spine/spine.h>
 #include"QtTextureLoader.hpp"
@@ -94,7 +93,7 @@ private:
 
     bool isValid() const;
 
-    std::optional<std::pair<QVector2D,QVector2D>> contentTransform() const;
+    std::pair<QVector2D,QVector2D> contentTransform() const;
 
     void advance();
 
